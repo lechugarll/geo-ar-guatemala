@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Colores base -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Colores del overlay AR -->
+    <color name="color_volcan_activo">#F44336</color>      <!-- Rojo -->
+    <color name="color_volcan_inactivo">#FF6600</color>    <!-- Naranja -->
+    <color name="color_cerro">#FFFFFF</color>              <!-- Blanco -->
+    <color name="color_lago">#4FC3F7</color>               <!-- Celeste -->
+
+    <!-- UI -->
+    <color name="color_boton_info">#424242</color>
+    <color name="color_boton_escanear">#1565C0</color>     <!-- Azul escaneo -->
+    <color name="color_boton_maps">#1976D2</color>         <!-- Azul Maps -->
+</resources>

@@ -1,0 +1,36 @@
+# Android
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# App build outputs
+/app/build/
+/app/release/
+
+# Keystore files - NUNCA subir al repo
+*.jks
+*.keystore
+*.p12
+
+# Gradle
+gradle-wrapper.jar
+.gradletasknamecache
+
+# IDE
+.idea/
+*.ipr
+*.iws
+out/
+
+# OS
+Thumbs.db

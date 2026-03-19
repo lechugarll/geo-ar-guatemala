@@ -1,0 +1,506 @@
+{
+  "version": "1.1",
+  "fuente": "IGN Guatemala / INSIVUMEH / CONAP",
+  "lugares": [
+    {
+      "id": 1,
+      "nombre": "Volcán Tajumulco",
+      "tipo": "volcan",
+      "latitud": 15.0342,
+      "longitud": -91.9003,
+      "elevacionMsnm": 4220,
+      "descripcion": "El volcán más alto de Centroamérica y México. Ubicado en San Marcos.",
+      "activo": false
+    },
+    {
+      "id": 2,
+      "nombre": "Volcán Tacaná",
+      "tipo": "volcan",
+      "latitud": 15.1322,
+      "longitud": -92.1097,
+      "elevacionMsnm": 4093,
+      "descripcion": "Volcán en la frontera entre Guatemala y México. Muestra actividad fumarólica.",
+      "activo": true
+    },
+    {
+      "id": 3,
+      "nombre": "Volcán Santa María",
+      "tipo": "volcan",
+      "latitud": 14.7564,
+      "longitud": -91.5522,
+      "elevacionMsnm": 3772,
+      "descripcion": "Volcán de gran erupción en 1902, cerca de Quetzaltenango. Uno de los más grandes del siglo XX.",
+      "activo": false
+    },
+    {
+      "id": 4,
+      "nombre": "Volcán Santiaguito",
+      "tipo": "volcan",
+      "latitud": 14.7456,
+      "longitud": -91.5631,
+      "elevacionMsnm": 2500,
+      "descripcion": "Domo volcánico activo en el flanco de Santa María. En erupción continua desde 1922.",
+      "activo": true
+    },
+    {
+      "id": 5,
+      "nombre": "Volcán Fuego",
+      "tipo": "volcan",
+      "latitud": 14.4731,
+      "longitud": -90.8801,
+      "elevacionMsnm": 3763,
+      "descripcion": "Uno de los volcanes más activos de Centroamérica. Erupción catastrófica en 2018.",
+      "activo": true
+    },
+    {
+      "id": 6,
+      "nombre": "Volcán Acatenango",
+      "tipo": "volcan",
+      "latitud": 14.5006,
+      "longitud": -90.8756,
+      "elevacionMsnm": 3976,
+      "descripcion": "Complejo volcánico junto al Fuego. Popular destino de senderismo nocturno.",
+      "activo": false
+    },
+    {
+      "id": 7,
+      "nombre": "Volcán Agua",
+      "tipo": "volcan",
+      "latitud": 14.4644,
+      "longitud": -90.7433,
+      "elevacionMsnm": 3760,
+      "descripcion": "Volcán extinto visible desde Antigua Guatemala. Icono del paisaje guatemalteco.",
+      "activo": false
+    },
+    {
+      "id": 8,
+      "nombre": "Volcán Pacaya",
+      "tipo": "volcan",
+      "latitud": 14.3814,
+      "longitud": -90.6014,
+      "elevacionMsnm": 2552,
+      "descripcion": "Volcán activo al sur de Ciudad de Guatemala. Permite acercarse a flujos de lava.",
+      "activo": true
+    },
+    {
+      "id": 9,
+      "nombre": "Volcán de Ipala",
+      "tipo": "volcan",
+      "latitud": 14.5547,
+      "longitud": -89.6317,
+      "elevacionMsnm": 1650,
+      "descripcion": "Volcán extinto en Chiquimula con laguna en su cráter. Reserva natural protegida.",
+      "activo": false
+    },
+    {
+      "id": 10,
+      "nombre": "Volcán Zunil",
+      "tipo": "volcan",
+      "latitud": 14.7869,
+      "longitud": -91.4897,
+      "elevacionMsnm": 3542,
+      "descripcion": "Volcán en Quetzaltenango con actividad fumarólica. Zona geotérmica activa.",
+      "activo": true
+    },
+    {
+      "id": 11,
+      "nombre": "Volcán Atitlán",
+      "tipo": "volcan",
+      "latitud": 14.5833,
+      "longitud": -91.1897,
+      "elevacionMsnm": 3537,
+      "descripcion": "Estratovolcán en la orilla sur del Lago de Atitlán.",
+      "activo": false
+    },
+    {
+      "id": 12,
+      "nombre": "Volcán Tolimán",
+      "tipo": "volcan",
+      "latitud": 14.6153,
+      "longitud": -91.1808,
+      "elevacionMsnm": 3158,
+      "descripcion": "Volcán junto a Atitlán, en la ribera del lago. Parte del paisaje característico.",
+      "activo": false
+    },
+    {
+      "id": 13,
+      "nombre": "Volcán San Pedro",
+      "tipo": "volcan",
+      "latitud": 14.6486,
+      "longitud": -91.2689,
+      "elevacionMsnm": 3020,
+      "descripcion": "Volcán extinto en el lago de Atitlán, junto al pueblo de San Pedro La Laguna.",
+      "activo": false
+    },
+    {
+      "id": 14,
+      "nombre": "Volcán Chicabal",
+      "tipo": "volcan",
+      "latitud": 14.8544,
+      "longitud": -91.6494,
+      "elevacionMsnm": 2900,
+      "descripcion": "Volcán extinto con laguna sagrada en su cráter. Sitio ceremonial maya Mam.",
+      "activo": false
+    },
+    {
+      "id": 15,
+      "nombre": "Volcán Cerro Quemado",
+      "tipo": "volcan",
+      "latitud": 14.8017,
+      "longitud": -91.5314,
+      "elevacionMsnm": 3197,
+      "descripcion": "Volcán extinto al este de Quetzaltenango. Forma parte del paisaje xelajú.",
+      "activo": false
+    },
+    {
+      "id": 16,
+      "nombre": "Sierra de los Cuchumatanes",
+      "tipo": "sierra",
+      "latitud": 15.4167,
+      "longitud": -91.5000,
+      "elevacionMsnm": 3837,
+      "descripcion": "La masa montañosa más extensa de Centroamérica no volcánica. Abarca Huehuetenango.",
+      "activo": false
+    },
+    {
+      "id": 17,
+      "nombre": "Sierra de Chuacús",
+      "tipo": "sierra",
+      "latitud": 15.0500,
+      "longitud": -90.5000,
+      "elevacionMsnm": 2500,
+      "descripcion": "Cordillera que atraviesa Baja Verapaz y El Quiché.",
+      "activo": false
+    },
+    {
+      "id": 18,
+      "nombre": "Sierra de las Minas",
+      "tipo": "sierra",
+      "latitud": 15.0833,
+      "longitud": -89.8333,
+      "elevacionMsnm": 3015,
+      "descripcion": "Reserva de biosfera entre Zacapa y Alta Verapaz. Fuente hídrica vital del país.",
+      "activo": false
+    },
+    {
+      "id": 19,
+      "nombre": "Cerro Zunil",
+      "tipo": "cerro",
+      "latitud": 14.7333,
+      "longitud": -91.4833,
+      "elevacionMsnm": 3542,
+      "descripcion": "Cerro volcánico en Quetzaltenango con fumarolas y aguas termales.",
+      "activo": false
+    },
+    {
+      "id": 20,
+      "nombre": "Cerro El Baúl",
+      "tipo": "cerro",
+      "latitud": 14.3667,
+      "longitud": -91.5167,
+      "elevacionMsnm": 880,
+      "descripcion": "Cerro aislado en la costa sur de Escuintla. Sitio arqueológico importante.",
+      "activo": false
+    },
+    {
+      "id": 21,
+      "nombre": "Montaña Xucaneb",
+      "tipo": "montana",
+      "latitud": 15.4500,
+      "longitud": -90.1000,
+      "elevacionMsnm": 2990,
+      "descripcion": "La montaña más alta de Alta Verapaz. Cubierta de bosque nuboso virgen.",
+      "activo": false
+    },
+    {
+      "id": 22,
+      "nombre": "Lago de Atitlán",
+      "tipo": "lago",
+      "latitud": 14.6900,
+      "longitud": -91.2000,
+      "elevacionMsnm": 1562,
+      "descripcion": "Lago volcánico considerado uno de los más hermosos del mundo. Sololá.",
+      "activo": false
+    },
+    {
+      "id": 23,
+      "nombre": "Lago de Amatitlán",
+      "tipo": "lago",
+      "latitud": 14.4667,
+      "longitud": -90.5833,
+      "elevacionMsnm": 1186,
+      "descripcion": "Lago al sur de Ciudad de Guatemala, formado en caldera volcánica.",
+      "activo": false
+    },
+    {
+      "id": 24,
+      "nombre": "Lago de Izabal",
+      "tipo": "lago",
+      "latitud": 15.5000,
+      "longitud": -89.1667,
+      "elevacionMsnm": 0,
+      "descripcion": "El lago más grande de Guatemala. Conecta con el mar Caribe por el Río Dulce.",
+      "activo": false
+    },
+    {
+      "id": 25,
+      "nombre": "Lago Petén Itzá",
+      "tipo": "lago",
+      "latitud": 16.9833,
+      "longitud": -89.8333,
+      "elevacionMsnm": 110,
+      "descripcion": "Lago en El Petén, hogar de la isla de Flores. Tiene fauna endémica como el cocodrilo.",
+      "activo": false
+    },
+    {
+      "id": 26,
+      "nombre": "Laguna Chicabal",
+      "tipo": "laguna",
+      "latitud": 14.8528,
+      "longitud": -91.6472,
+      "elevacionMsnm": 2712,
+      "descripcion": "Laguna sagrada en el cráter del Volcán Chicabal. Sitio de ceremonias mayas.",
+      "activo": false
+    },
+    {
+      "id": 27,
+      "nombre": "Laguna de Ipala",
+      "tipo": "laguna",
+      "latitud": 14.5575,
+      "longitud": -89.6331,
+      "elevacionMsnm": 1530,
+      "descripcion": "Laguna en el cráter del Volcán de Ipala en Chiquimula. Área protegida.",
+      "activo": false
+    },
+    {
+      "id": 28,
+      "nombre": "Laguna Lachúa",
+      "tipo": "laguna",
+      "latitud": 15.9167,
+      "longitud": -90.6667,
+      "elevacionMsnm": 180,
+      "descripcion": "Laguna kárstica en el Parque Nacional Laguna Lachúa, Alta Verapaz.",
+      "activo": false
+    },
+    {
+      "id": 29,
+      "nombre": "Cerro Alux",
+      "tipo": "cerro",
+      "latitud": 14.5833,
+      "longitud": -90.6167,
+      "elevacionMsnm": 2040,
+      "descripcion": "Reserva forestal metropolitana al oeste de Ciudad de Guatemala. Pulmón de la capital.",
+      "activo": false
+    },
+    {
+      "id": 30,
+      "nombre": "Volcán Jumay",
+      "tipo": "volcan",
+      "latitud": 14.6833,
+      "longitud": -89.7500,
+      "elevacionMsnm": 2175,
+      "descripcion": "Volcán extinto en Jalapa, también conocido como Cerro Jumay.",
+      "activo": false
+    },
+    {
+      "id": 31,
+      "nombre": "Volcán Moyuta",
+      "tipo": "volcan",
+      "latitud": 14.0333,
+      "longitud": -90.1000,
+      "elevacionMsnm": 1662,
+      "descripcion": "Volcán en el departamento de Jutiapa, en la boca costa del Pacífico.",
+      "activo": false
+    },
+    {
+      "id": 32,
+      "nombre": "Volcán Tecuamburro",
+      "tipo": "volcan",
+      "latitud": 14.1667,
+      "longitud": -90.4167,
+      "elevacionMsnm": 1840,
+      "descripcion": "Volcán extinto en Santa Rosa con lagunas en su cráter.",
+      "activo": false
+    },
+    {
+      "id": 33,
+      "nombre": "Montaña Miramar",
+      "tipo": "montana",
+      "latitud": 14.9667,
+      "longitud": -89.6333,
+      "elevacionMsnm": 2730,
+      "descripcion": "Montaña en Chiquimula, también conocida como Cerro Brujo.",
+      "activo": false
+    },
+    {
+      "id": 34,
+      "nombre": "Sierra Madre de Chiapas",
+      "tipo": "sierra",
+      "latitud": 15.2000,
+      "longitud": -91.8000,
+      "elevacionMsnm": 3000,
+      "descripcion": "Extensión guatemalteca de la Sierra Madre que recorre San Marcos y Huehuetenango.",
+      "activo": false
+    },
+    {
+      "id": 35,
+      "nombre": "Cerro Xamán",
+      "tipo": "cerro",
+      "latitud": 15.6833,
+      "longitud": -90.4167,
+      "elevacionMsnm": 2458,
+      "descripcion": "Cerro en Alta Verapaz dentro de la zona de los Cuchumatanes orientales.",
+      "activo": false
+    },
+    {
+      "id": 36,
+      "nombre": "Volcán Ixhuatán",
+      "tipo": "volcan",
+      "latitud": 14.1383,
+      "longitud": -90.0286,
+      "elevacionMsnm": 1580,
+      "descripcion": "Volcán extinto en Santa Rosa, también llamado Volcán Chingo. Vista al Pacífico.",
+      "activo": false
+    },
+    {
+      "id": 37,
+      "nombre": "Volcán Suchitán",
+      "tipo": "volcan",
+      "latitud": 14.3997,
+      "longitud": -89.7628,
+      "elevacionMsnm": 2042,
+      "descripcion": "Volcán en Jutiapa con laguna en su cráter. Área protegida de Jutiapa.",
+      "activo": false
+    },
+    {
+      "id": 38,
+      "nombre": "Volcán Quetzaltepeque",
+      "tipo": "volcan",
+      "latitud": 14.4431,
+      "longitud": -89.4667,
+      "elevacionMsnm": 1210,
+      "descripcion": "Volcán extinto en Chiquimula, cerca del municipio de Quetzaltepeque.",
+      "activo": false
+    },
+    {
+      "id": 39,
+      "nombre": "Cerro San Gil",
+      "tipo": "cerro",
+      "latitud": 15.7833,
+      "longitud": -88.9167,
+      "elevacionMsnm": 1266,
+      "descripcion": "Área protegida en Izabal con bosque nuboso tropical. Importante cuenca hídrica del Atlántico.",
+      "activo": false
+    },
+    {
+      "id": 40,
+      "nombre": "Sierra Santa Cruz",
+      "tipo": "sierra",
+      "latitud": 15.6167,
+      "longitud": -89.0833,
+      "elevacionMsnm": 1219,
+      "descripcion": "Sierra en Izabal que bordea el lago Izabal al norte. Ecosistema de selva tropical.",
+      "activo": false
+    },
+    {
+      "id": 41,
+      "nombre": "Cerro Miramundo",
+      "tipo": "cerro",
+      "latitud": 14.5167,
+      "longitud": -89.9500,
+      "elevacionMsnm": 2220,
+      "descripcion": "Cerro en Jalapa, punto de observación panorámica con vista a varios departamentos.",
+      "activo": false
+    },
+    {
+      "id": 42,
+      "nombre": "Cerro La Cerra",
+      "tipo": "cerro",
+      "latitud": 14.9833,
+      "longitud": -89.5500,
+      "elevacionMsnm": 1820,
+      "descripcion": "Cerro en Zacapa, área de bosque subtropical seco. Parte de la cuenca del Motagua.",
+      "activo": false
+    },
+    {
+      "id": 43,
+      "nombre": "Cerro La Conora",
+      "tipo": "cerro",
+      "latitud": 14.6167,
+      "longitud": -90.7000,
+      "elevacionMsnm": 1870,
+      "descripcion": "Cerro en Sacatepéquez, con vista al Valle de Guatemala y volcanes del sur.",
+      "activo": false
+    },
+    {
+      "id": 44,
+      "nombre": "Montaña El Imposible",
+      "tipo": "montana",
+      "latitud": 15.3167,
+      "longitud": -90.3167,
+      "elevacionMsnm": 2100,
+      "descripcion": "Macizo montañoso en Quiché, cubierto de selva tropical en la transición hacia el Petén.",
+      "activo": false
+    },
+    {
+      "id": 45,
+      "nombre": "Cerro Pinal",
+      "tipo": "cerro",
+      "latitud": 14.9000,
+      "longitud": -91.4167,
+      "elevacionMsnm": 3100,
+      "descripcion": "Cerro en los alrededores de Quetzaltenango con bosque de pinos y cipresales.",
+      "activo": false
+    },
+    {
+      "id": 46,
+      "nombre": "Laguna El Pino",
+      "tipo": "laguna",
+      "latitud": 14.4000,
+      "longitud": -90.1167,
+      "elevacionMsnm": 900,
+      "descripcion": "Laguna en Santa Rosa, destino ecoturístico cerca de la costa del Pacífico.",
+      "activo": false
+    },
+    {
+      "id": 47,
+      "nombre": "Volcán Chingo",
+      "tipo": "volcan",
+      "latitud": 14.1167,
+      "longitud": -89.7833,
+      "elevacionMsnm": 514,
+      "descripcion": "Volcán extinto en la frontera con El Salvador. Forma reconocible desde la carretera al Oriente.",
+      "activo": false
+    },
+    {
+      "id": 48,
+      "nombre": "Cerro Arenal",
+      "tipo": "cerro",
+      "latitud": 14.3333,
+      "longitud": -90.3833,
+      "elevacionMsnm": 1700,
+      "descripcion": "Cerro en Escuintla, área forestal protegida entre la capital y la costa sur.",
+      "activo": false
+    },
+    {
+      "id": 49,
+      "nombre": "Sierra de Chamá",
+      "tipo": "sierra",
+      "latitud": 15.7500,
+      "longitud": -90.3333,
+      "elevacionMsnm": 1800,
+      "descripcion": "Sierra en Alta Verapaz y El Quiché, zona de bosque tropical húmedo.",
+      "activo": false
+    },
+    {
+      "id": 50,
+      "nombre": "Laguna Brava",
+      "tipo": "laguna",
+      "latitud": 15.8667,
+      "longitud": -91.8000,
+      "elevacionMsnm": 1600,
+      "descripcion": "Laguna de color verde esmeralda en Huehuetenango, cerca de la frontera con México.",
+      "activo": false
+    }
+  ]
+}

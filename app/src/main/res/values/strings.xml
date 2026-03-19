@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GeoAR Guatemala</string>
+
+    <!-- Pantalla de permisos -->
+    <string name="titulo_permisos">GeoAR necesita tu ayuda</string>
+    <string name="descripcion_permisos">Para identificar volcanes, cerros y lagos a tu alrededor necesitamos:\n\n📷 Cámara — para mostrar el mundo real\n📍 Ubicación — para saber desde dónde estás mirando</string>
+    <string name="btn_otorgar_permisos">Otorgar permisos</string>
+
+    <!-- Botones -->
+    <string name="btn_info_descripcion">Información del lugar más cercano</string>
+    <string name="btn_escanear_descripcion">Escanear accidente geográfico</string>
+    <string name="btn_ver_en_maps">Ver en Maps</string>
+    <string name="btn_cerrar">Cerrar</string>
+
+    <!-- Mensajes -->
+    <string name="sin_gps">Esperando señal GPS…</string>
+    <string name="sin_resultados_escaneo">No se encontró ningún accidente geográfico cercano</string>
+</resources>
