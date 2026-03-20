@@ -1,19 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">GeoAR Guatemala</string>
+    <string name="app_display_name">GeoAR</string>
 
     <!-- Pantalla de permisos -->
     <string name="titulo_permisos">GeoAR necesita tu ayuda</string>
     <string name="descripcion_permisos">Para identificar volcanes, cerros y lagos a tu alrededor necesitamos:\n\n📷 Cámara — para mostrar el mundo real\n📍 Ubicación — para saber desde dónde estás mirando</string>
     <string name="btn_otorgar_permisos">Otorgar permisos</string>
 
-    <!-- Botones -->
-    <string name="btn_info_descripcion">Información del lugar más cercano</string>
-    <string name="btn_escanear_descripcion">Escanear accidente geográfico</string>
-    <string name="btn_ver_en_maps">Ver en Maps</string>
-    <string name="btn_cerrar">Cerrar</string>
+    <!-- Bottom nav -->
+    <string name="nav_explorer">EXPLORER</string>
+    <string name="nav_scan">SCAN</string>
+    <string name="nav_archive">ARCHIVE</string>
 
-    <!-- Mensajes -->
+    <!-- Explorer screen -->
+    <string name="gps_precision_alta">GPS: ALTA PRECISIÓN</string>
+    <string name="gps_precision_baja">GPS: BAJA PRECISIÓN</string>
+    <string name="gps_sin_senal">GPS: SIN SEÑAL</string>
+    <string name="compass_activo">BRÚJULA: ACTIVA</string>
+    <string name="compass_gps">ORIENTACIÓN: GPS</string>
+    <string name="ready_to_analyze">READY TO ANALYZE</string>
+
+    <!-- Scan screen -->
+    <string name="active_scan">ACTIVE SCAN</string>
+    <string name="scan_analyzing">ANALYZING TERRAIN…</string>
+    <string name="scan_triangulating">TRIANGULATING LOCATION…</string>
+    <string name="scan_matching">MATCHING GEODATA…</string>
+    <string name="scan_complete">IDENTIFICATION COMPLETE</string>
+    <string name="scan_no_result">No se encontró ningún accidente geográfico cercano</string>
+    <string name="scan_sin_gps">Esperando señal GPS…</string>
+    <string name="label_altitud">ALTITUDE</string>
+    <string name="label_referencia">REF</string>
+
+    <!-- History screen -->
+    <string name="expedition_log">Expedition Log</string>
+    <string name="sites_recorded">%d SITES RECORDED</string>
+    <string name="filter_recent">RECENT</string>
+    <string name="filter_volcanoes">VOLCANES</string>
+    <string name="filter_lakes">LAGOS</string>
+    <string name="regional_coverage">Regional Coverage</string>
+    <string name="coverage_desc">Has escaneado %d%% de los accidentes registrados</string>
+    <string name="history_empty">Aún no has escaneado ningún lugar.\nPresiona SCAN para comenzar.</string>
+
+    <!-- Shared -->
+    <string name="btn_ver_en_maps">VER EN MAPS</string>
+    <string name="btn_cerrar">Cerrar</string>
+    <string name="btn_info_descripcion">Información del lugar</string>
+    <string name="btn_escanear_descripcion">Escanear accidente geográfico</string>
     <string name="sin_gps">Esperando señal GPS…</string>
     <string name="sin_resultados_escaneo">No se encontró ningún accidente geográfico cercano</string>
 </resources>

@@ -55,6 +55,9 @@ dependencies {
     // Gson para parseo de JSON
     implementation("com.google.code.gson:gson:2.11.0")
 
+    // RecyclerView para historial
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
+
     // Tests
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

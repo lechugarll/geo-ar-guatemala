@@ -9,6 +9,8 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,32 +19,48 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.geoar.guatemala.databinding.ActivityMainBinding
 import com.geoar.guatemala.models.LugarGeografico
 
 /**
  * Actividad principal de GeoAR Guatemala.
  *
- * Responsabilidades:
- *   1. Solicitar permisos de cámara y ubicación
- *   2. Iniciar el preview de CameraX
- *   3. Iniciar SensorFusion para leer orientación del dispositivo
- *   4. Recibir actualizaciones de GPS via LocationManager nativo de Android
- *   5. Calcular qué accidentes geográficos son visibles y pasarlos al overlay AR
+ * Pantallas (tabs):
+ *   Explorer — cámara en vivo + coordenadas GPS
+ *   Scan     — visor con corchetes + animación de análisis + resultado
+ *   Archive  — historial de escaneos (RecyclerView)
  *
  * Nota: los lambdas de Kotlin ({}) requieren { en la misma línea que la función.
  * Las llaves de clases, funciones, if/when usan estilo Allman.
  */
 class MainActivity : AppCompatActivity()
 {
+    // -------------------------------------------------------------------------
+    // Enum de tabs
+    // -------------------------------------------------------------------------
+
+    private enum class Tab { EXPLORER, SCAN, ARCHIVE }
+
+    private var tabActual: Tab = Tab.EXPLORER
+
+    // -------------------------------------------------------------------------
+    // ViewBinding y dependencias
+    // -------------------------------------------------------------------------
+
     private lateinit var binding: ActivityMainBinding
     private lateinit var sensorFusion: SensorFusion
     private lateinit var locationManager: LocationManager
     private lateinit var lugaresRepository: LugaresRepository
+    private lateinit var historialManager: HistorialManager
+    private lateinit var historialAdapter: HistorialAdapter
 
     private var todosLosLugares: List<LugarGeografico> = emptyList()
     private var ubicacionActual: Location? = null
     private var elevacionUsuarioM: Int = 1500
+
+    private val handler = Handler(Looper.getMainLooper())
+    private var scanEnProgreso = false
 
     // -------------------------------------------------------------------------
     // Permisos
@@ -53,7 +71,6 @@ class MainActivity : AppCompatActivity()
         Manifest.permission.ACCESS_FINE_LOCATION
     )
 
-    // Nota: { del lambda registerForActivityResult debe ir en la misma línea
     private val lanzadorPermisos = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permisos ->
@@ -71,7 +88,7 @@ class MainActivity : AppCompatActivity()
     }
 
     // -------------------------------------------------------------------------
-    // Listener de ubicación — usa object : para compatibilidad Allman
+    // Listener de ubicación
     // -------------------------------------------------------------------------
 
     private val locationListener = object : LocationListener
@@ -85,13 +102,12 @@ class MainActivity : AppCompatActivity()
                 elevacionUsuarioM = location.altitude.toInt()
             }
 
-            // En modo ACCEL_ONLY (sin brújula), el azimuth viene del bearing del GPS
             if (location.hasBearing() && location.speed > 0.5f)
             {
                 sensorFusion.actualizarAzimuthGps(location.bearing)
             }
 
-            actualizarOverlay()
+            actualizarExplorer()
         }
     }
 
@@ -107,11 +123,9 @@ class MainActivity : AppCompatActivity()
 
         lugaresRepository = LugaresRepository(this)
         todosLosLugares = lugaresRepository.cargarLugares()
+        historialManager = HistorialManager(this)
 
-        // { del lambda setOnClickListener debe ir en la misma línea en Kotlin
-        binding.btnInfo.setOnClickListener { mostrarInfoLugarCercano() }
-        binding.btnEscanear.setOnClickListener { escanear() }
-        binding.btnCerrarResultado.setOnClickListener { binding.panelResultado.visibility = View.GONE }
+        configurarNavegacion()
 
         if (tienePermisos())
         {
@@ -136,6 +150,7 @@ class MainActivity : AppCompatActivity()
     override fun onPause()
     {
         super.onPause()
+        handler.removeCallbacksAndMessages(null)
 
         if (::sensorFusion.isInitialized)
         {
@@ -145,6 +160,45 @@ class MainActivity : AppCompatActivity()
         if (::locationManager.isInitialized)
         {
             locationManager.removeUpdates(locationListener)
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Navegación entre tabs
+    // -------------------------------------------------------------------------
+
+    private fun configurarNavegacion()
+    {
+        binding.tabExplorer.setOnClickListener { mostrarPantalla(Tab.EXPLORER) }
+        binding.tabScan.setOnClickListener { mostrarPantalla(Tab.SCAN) }
+        binding.tabArchive.setOnClickListener { mostrarPantalla(Tab.ARCHIVE) }
+    }
+
+    private fun mostrarPantalla(tab: Tab)
+    {
+        tabActual = tab
+
+        // Mostrar/ocultar pantallas
+        binding.screenExplorer.root.visibility = if (tab == Tab.EXPLORER) View.VISIBLE else View.GONE
+        binding.screenScan.root.visibility     = if (tab == Tab.SCAN)     View.VISIBLE else View.GONE
+        binding.screenHistory.root.visibility  = if (tab == Tab.ARCHIVE)  View.VISIBLE else View.GONE
+
+        // Actualizar estado en la barra superior
+        binding.labelTabStatus.visibility = if (tab == Tab.SCAN) View.VISIBLE else View.GONE
+        binding.labelTabStatus.text = getString(R.string.active_scan)
+
+        // Actualizar iconos de nav (active = primary, inactive = on_surface_variant)
+        val colorActivo    = getColor(R.color.primary)
+        val colorInactivo  = getColor(R.color.on_surface_variant)
+
+        binding.iconExplorer.setColorFilter(if (tab == Tab.EXPLORER) colorActivo else colorInactivo)
+        binding.iconArchive.setColorFilter(if (tab == Tab.ARCHIVE)  colorActivo else colorInactivo)
+
+        when (tab)
+        {
+            Tab.EXPLORER -> { /* actualizarExplorer() se llama via locationListener */ }
+            Tab.SCAN     -> iniciarEscaneo()
+            Tab.ARCHIVE  -> cargarHistorial()
         }
     }
 
@@ -162,11 +216,14 @@ class MainActivity : AppCompatActivity()
     private fun iniciarApp()
     {
         binding.pantallaPermisos.visibility = View.GONE
-        binding.contenidoPrincipal.visibility = View.VISIBLE
+        binding.topBar.visibility           = View.VISIBLE
+        binding.bottomNav.visibility        = View.VISIBLE
 
         iniciarCamara()
         iniciarSensores()
         iniciarUbicacion()
+        configurarHistorial()
+        mostrarPantalla(Tab.EXPLORER)
     }
 
     private fun iniciarCamara()
@@ -204,8 +261,6 @@ class MainActivity : AppCompatActivity()
     {
         sensorFusion = SensorFusion(this)
 
-        Toast.makeText(this, "Sensor: ${sensorFusion.descripcionModo()}", Toast.LENGTH_SHORT).show()
-
         if (sensorFusion.modo == SensorFusion.Modo.ACCEL_ONLY)
         {
             Toast.makeText(
@@ -223,7 +278,12 @@ class MainActivity : AppCompatActivity()
             ).show()
         }
 
-        sensorFusion.onOrientacionCambiada = { _, _, _ -> actualizarOverlay() }
+        sensorFusion.onOrientacionCambiada = { _, _, _ ->
+            if (tabActual == Tab.EXPLORER)
+            {
+                actualizarBrujula()
+            }
+        }
         sensorFusion.iniciar()
     }
 
@@ -257,7 +317,7 @@ class MainActivity : AppCompatActivity()
 
                 locationManager.getLastKnownLocation(proveedor)?.let { location ->
                     ubicacionActual = location
-                    actualizarOverlay()
+                    actualizarExplorer()
                 }
             }
         }
@@ -271,70 +331,145 @@ class MainActivity : AppCompatActivity()
         }
     }
 
+    private fun configurarHistorial()
+    {
+        historialAdapter = HistorialAdapter(emptyList()) { /* item click no-op */ }
+
+        binding.screenHistory.recyclerHistorial.apply {
+            layoutManager = LinearLayoutManager(this@MainActivity)
+            adapter = historialAdapter
+        }
+
+        binding.screenHistory.chipReciente.setOnClickListener { cargarHistorial(filtro = "reciente") }
+        binding.screenHistory.chipVolcanes.setOnClickListener { cargarHistorial(filtro = "volcan") }
+        binding.screenHistory.chipLagos.setOnClickListener    { cargarHistorial(filtro = "lago") }
+    }
+
     // -------------------------------------------------------------------------
-    // Overlay AR
+    // Explorer tab
     // -------------------------------------------------------------------------
 
-    private fun actualizarOverlay()
+    private fun actualizarExplorer()
     {
         val ubicacion = ubicacionActual ?: return
+        val ex = binding.screenExplorer
 
-        try
+        val latDir = if (ubicacion.latitude >= 0) "N" else "S"
+        val lonDir = if (ubicacion.longitude >= 0) "E" else "W"
+        ex.coordLat.text = String.format("%.2f°%s", Math.abs(ubicacion.latitude), latDir)
+        ex.coordLon.text = String.format("%.2f°%s", Math.abs(ubicacion.longitude), lonDir)
+
+        val tieneAlta = ubicacion.hasAccuracy() && ubicacion.accuracy <= 20f
+        ex.estadoGps.text = if (tieneAlta)
         {
-            val puntosVisibles = GeoCalculator.filtrarPuntosVisibles(
-                latUsuario = ubicacion.latitude,
-                lonUsuario = ubicacion.longitude,
-                elevacionUsuarioM = elevacionUsuarioM,
-                azimuth = sensorFusion.azimuth,
-                pitch = sensorFusion.pitch,
-                todos = todosLosLugares
-            )
-
-            runOnUiThread { binding.arOverlay.actualizarPuntos(puntosVisibles) }
+            getString(R.string.gps_precision_alta)
         }
-        catch (e: Exception)
+        else
         {
-            // Ignorar errores de cálculo individuales
+            getString(R.string.gps_precision_baja)
+        }
+
+        actualizarBrujula()
+    }
+
+    private fun actualizarBrujula()
+    {
+        if (!::sensorFusion.isInitialized) return
+
+        val ex = binding.screenExplorer
+        ex.estadoBrujula.text = when (sensorFusion.modo)
+        {
+            SensorFusion.Modo.ACCEL_ONLY -> getString(R.string.compass_gps)
+            SensorFusion.Modo.NINGUNO    -> "BRÚJULA: —"
+            else                         -> getString(R.string.compass_activo)
         }
     }
 
     // -------------------------------------------------------------------------
-    // Escaneo tipo Google Lens
+    // Scan tab — animación y resultado
     // -------------------------------------------------------------------------
 
-    private fun escanear()
+    private fun iniciarEscaneo()
     {
+        if (scanEnProgreso) return
+
+        val sc = binding.screenScan
+        sc.panelEstadoScan.visibility   = View.VISIBLE
+        sc.panelResultadoScan.visibility = View.GONE
+        sc.scanStep1.text = ""
+        sc.scanStep2.text = ""
+        sc.scanStep3.text = ""
+
         val ubicacion = ubicacionActual
         if (ubicacion == null)
         {
-            Toast.makeText(this, getString(R.string.sin_gps), Toast.LENGTH_SHORT).show()
+            sc.scanStep1.text = getString(R.string.scan_sin_gps)
             return
         }
 
+        scanEnProgreso = true
+
+        handler.postDelayed({
+            sc.scanStep1.text = getString(R.string.scan_analyzing)
+        }, 300L)
+
+        handler.postDelayed({
+            sc.scanStep2.text = getString(R.string.scan_triangulating)
+        }, 1000L)
+
+        handler.postDelayed({
+            sc.scanStep3.text = getString(R.string.scan_matching)
+        }, 1700L)
+
+        handler.postDelayed({
+            finalizarEscaneo(ubicacion)
+        }, 2400L)
+    }
+
+    private fun finalizarEscaneo(ubicacion: Location)
+    {
+        scanEnProgreso = false
+
         val candidatos = GeoCalculator.escanear(
-            latUsuario = ubicacion.latitude,
-            lonUsuario = ubicacion.longitude,
-            elevacionUsuarioM = elevacionUsuarioM,
-            azimuth = sensorFusion.azimuth,
-            pitch = sensorFusion.pitch,
-            todos = todosLosLugares
+            latUsuario         = ubicacion.latitude,
+            lonUsuario         = ubicacion.longitude,
+            elevacionUsuarioM  = elevacionUsuarioM,
+            azimuth            = sensorFusion.azimuth,
+            pitch              = sensorFusion.pitch,
+            todos              = todosLosLugares
         )
+
+        val sc = binding.screenScan
 
         if (candidatos.isEmpty())
         {
-            Toast.makeText(this, getString(R.string.sin_resultados_escaneo), Toast.LENGTH_SHORT).show()
+            sc.scanStep3.text = getString(R.string.scan_no_result)
             return
         }
 
-        mostrarResultadoEscaneo(candidatos.first())
-    }
+        val (lugar, punto) = candidatos.first()
 
-    private fun mostrarResultadoEscaneo(resultado: Pair<LugarGeografico, PuntoVisible>)
-    {
-        val (lugar, punto) = resultado
+        // Guardar en historial
+        val entrada = HistorialManager.crearEntrada(
+            nombre       = lugar.nombre,
+            tipo         = lugar.tipo,
+            latitud      = lugar.latitud,
+            longitud     = lugar.longitud,
+            elevacionMsnm = lugar.elevacionMsnm,
+            descripcion  = lugar.descripcion,
+            distanciaKm  = punto.distanciaKm,
+            activo       = lugar.activo
+        )
+        historialManager.guardar(entrada)
+
+        // Poblar resultado
+        sc.resultadoNombre.text = lugar.nombre
+        sc.resultadoElevacion.text = "${lugar.elevacionMsnm}m"
 
         val tipo = lugar.tipo.replaceFirstChar { it.uppercase() }
-        val estadoVolcan = if (lugar.tipo == "volcan" && lugar.activo) " · Activo" else ""
+        val activo = if (lugar.tipo == "volcan" && lugar.activo) " · Activo" else ""
+        sc.resultadoBadge.text = "$tipo$activo"
+
         val distanciaTexto = if (punto.distanciaKm < 10.0)
         {
             String.format("%.1f km", punto.distanciaKm)
@@ -343,13 +478,17 @@ class MainActivity : AppCompatActivity()
         {
             "${punto.distanciaKm.toInt()} km"
         }
+        sc.resultadoDescripcion.text = "${lugar.descripcion}\n\n$distanciaTexto · ${lugar.elevacionMsnm} msnm"
 
-        binding.resultadoNombre.text = lugar.nombre
-        binding.resultadoTipoDistancia.text = "$tipo$estadoVolcan  ·  $distanciaTexto  ·  ${lugar.elevacionMsnm} msnm"
-        binding.resultadoDescripcion.text = lugar.descripcion
-        binding.panelResultado.visibility = View.VISIBLE
+        sc.btnCerrarResultado.setOnClickListener {
+            sc.panelResultadoScan.visibility = View.GONE
+            sc.panelEstadoScan.visibility    = View.GONE
+        }
 
-        binding.btnVerEnMaps.setOnClickListener { abrirEnMaps(lugar) }
+        sc.btnVerEnMaps.setOnClickListener { abrirEnMaps(lugar) }
+
+        sc.panelEstadoScan.visibility    = View.GONE
+        sc.panelResultadoScan.visibility = View.VISIBLE
     }
 
     private fun abrirEnMaps(lugar: LugarGeografico)
@@ -364,59 +503,55 @@ class MainActivity : AppCompatActivity()
         }
         else
         {
-            // Fallback: abrir en navegador si no hay app de mapas
             val webUri = Uri.parse("https://maps.google.com/?q=${lugar.latitud},${lugar.longitud}")
             startActivity(Intent(Intent.ACTION_VIEW, webUri))
         }
     }
 
     // -------------------------------------------------------------------------
-    // Info botón (top-right FAB, muestra el más cercano visible)
+    // Archive tab
     // -------------------------------------------------------------------------
 
-    private fun mostrarInfoLugarCercano()
+    private fun cargarHistorial(filtro: String = "reciente")
     {
-        val ubicacion = ubicacionActual
-        if (ubicacion == null)
+        val todos = historialManager.cargarTodos()
+
+        val lista = when (filtro)
         {
-            Toast.makeText(this, getString(R.string.sin_gps), Toast.LENGTH_SHORT).show()
-            return
+            "volcan" -> todos.filter { it.tipo == "volcan" }
+            "lago"   -> todos.filter { it.tipo == "lago" }
+            else     -> todos
         }
 
-        val puntosVisibles = GeoCalculator.filtrarPuntosVisibles(
-            latUsuario = ubicacion.latitude,
-            lonUsuario = ubicacion.longitude,
-            elevacionUsuarioM = elevacionUsuarioM,
-            azimuth = sensorFusion.azimuth,
-            pitch = sensorFusion.pitch,
-            todos = todosLosLugares
-        )
+        val sc = binding.screenHistory
 
-        val resultado = if (puntosVisibles.isNotEmpty())
+        sc.labelTotalSites.text = getString(R.string.sites_recorded, todos.size)
+
+        if (lista.isEmpty())
         {
-            puntosVisibles.first()
+            sc.recyclerHistorial.visibility   = View.GONE
+            sc.labelHistorialVacio.visibility = View.VISIBLE
         }
         else
         {
-            // Ninguno en el margen estricto — usar escaneo para el más cercano en dirección
-            GeoCalculator.escanear(
-                latUsuario = ubicacion.latitude,
-                lonUsuario = ubicacion.longitude,
-                elevacionUsuarioM = elevacionUsuarioM,
-                azimuth = sensorFusion.azimuth,
-                pitch = sensorFusion.pitch,
-                todos = todosLosLugares,
-                maxResultados = 1
-            ).firstOrNull()
+            sc.recyclerHistorial.visibility   = View.VISIBLE
+            sc.labelHistorialVacio.visibility = View.GONE
+            historialAdapter.actualizarLista(lista)
         }
 
-        if (resultado == null)
+        // Cobertura regional
+        val total = todosLosLugares.size
+        if (total > 0 && todos.isNotEmpty())
         {
-            Toast.makeText(this, getString(R.string.sin_resultados_escaneo), Toast.LENGTH_SHORT).show()
-            return
+            val porcentaje = (todos.size * 100) / total
+            sc.cardCoverage.visibility = View.VISIBLE
+            sc.labelCoverageDesc.text  = getString(R.string.coverage_desc, porcentaje)
+            sc.progressCoverage.progress = porcentaje
         }
-
-        mostrarResultadoEscaneo(resultado)
+        else
+        {
+            sc.cardCoverage.visibility = View.GONE
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -426,7 +561,8 @@ class MainActivity : AppCompatActivity()
     private fun mostrarPantallaPermisosDenegados()
     {
         binding.pantallaPermisos.visibility = View.VISIBLE
-        binding.contenidoPrincipal.visibility = View.GONE
+        binding.topBar.visibility           = View.GONE
+        binding.bottomNav.visibility        = View.GONE
 
         binding.btnReintentarPermisos.setOnClickListener {
             lanzadorPermisos.launch(permisosRequeridos)

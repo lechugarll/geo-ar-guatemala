@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="28dp"
+    android:height="28dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Camera/scan icon -->
+    <path
+        android:fillColor="#FF0A3909"
+        android:pathData="M12,15.2A3.2,3.2 0,1 1,15.2 12,3.2A3.2,3.2 0,0 1,12 15.2M9,2L7.17,4L4,4c-1.1,0 -2,0.9 -2,2v12c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2L22,6c0,-1.1 -0.9,-2 -2,-2h-3.17L15,2M12,7a5,5 0,1 1,-5 5,5 5,0 0,1 5,-5z"/>
+</vector>

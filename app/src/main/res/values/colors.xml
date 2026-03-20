@@ -1,17 +1,62 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Colores base -->
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <!-- === Design System: Tectonic Interface === -->
 
-    <!-- Colores del overlay AR -->
-    <color name="color_volcan_activo">#F44336</color>      <!-- Rojo -->
-    <color name="color_volcan_inactivo">#FF6600</color>    <!-- Naranja -->
-    <color name="color_cerro">#FFFFFF</color>              <!-- Blanco -->
-    <color name="color_lago">#4FC3F7</color>               <!-- Celeste -->
+    <!-- Surfaces -->
+    <color name="surface">#FF121416</color>
+    <color name="surface_container_lowest">#FF0C0E10</color>
+    <color name="surface_container_low">#FF1A1C1E</color>
+    <color name="surface_container">#FF1E2022</color>
+    <color name="surface_container_high">#FF282A2C</color>
+    <color name="surface_container_highest">#FF333537</color>
+    <color name="surface_variant">#FF333537</color>
 
-    <!-- UI -->
-    <color name="color_boton_info">#424242</color>
-    <color name="color_boton_escanear">#1565C0</color>     <!-- Azul escaneo -->
-    <color name="color_boton_maps">#1976D2</color>         <!-- Azul Maps -->
+    <!-- Primary (green) -->
+    <color name="primary">#FFA1D494</color>
+    <color name="primary_container">#FF2D5A27</color>
+    <color name="on_primary">#FF0A3909</color>
+
+    <!-- Tertiary (amber — active volcanoes, alerts) -->
+    <color name="tertiary">#FFFFBA38</color>
+    <color name="tertiary_container">#FF6C4A00</color>
+
+    <!-- On-surface text -->
+    <color name="on_surface">#FFE2E2E5</color>
+    <color name="on_surface_variant">#FFC2C9BB</color>
+    <color name="outline_variant">#FF42493E</color>
+
+    <!-- Error -->
+    <color name="color_error">#FFFFB4AB</color>
+
+    <!-- AR Overlay (CameraOverlayView) -->
+    <color name="color_volcan_activo">#FFFF4444</color>
+    <color name="color_volcan_inactivo">#FFFF8C00</color>
+    <color name="color_cerro">#FFE2E2E5</color>
+    <color name="color_lago">#FF4FC3F7</color>
+
+    <!-- UI buttons (legacy) -->
+    <color name="color_boton_info">#FF424242</color>
+    <color name="color_boton_escanear">#FF1565C0</color>
+    <color name="color_boton_maps">#FF1976D2</color>
+
+    <!-- History badge colors by type -->
+    <color name="badge_volcan_activo_bg">#33FF4444</color>
+    <color name="badge_volcan_activo_text">#FFFF6B6B</color>
+    <color name="badge_volcan_bg">#33FFBA38</color>
+    <color name="badge_volcan_text">#FFFFBA38</color>
+    <color name="badge_lago_bg">#334FC3F7</color>
+    <color name="badge_lago_text">#FF4FC3F7</color>
+    <color name="badge_sierra_bg">#33A1887F</color>
+    <color name="badge_sierra_text">#FFA1887F</color>
+    <color name="badge_cerro_bg">#33AAAAAA</color>
+    <color name="badge_cerro_text">#FFAAAAAA</color>
+
+    <!-- History thumbnail background colors by type -->
+    <color name="thumb_volcan_activo">#CCFF4444</color>
+    <color name="thumb_volcan">#CCFF8C00</color>
+    <color name="thumb_lago">#CC4FC3F7</color>
+    <color name="thumb_laguna">#CC26C6DA</color>
+    <color name="thumb_sierra">#CC8D6E63</color>
+    <color name="thumb_cerro">#CC78909C</color>
+    <color name="thumb_montana">#CC78909C</color>
 </resources>

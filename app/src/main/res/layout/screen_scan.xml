@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pantalla Scan: visor + animación de análisis + resultado -->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Fondo semitransparente sobre la cámara -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#66000000" />
+
+    <!-- Barra superior: GPS strength -->
+    <LinearLayout
+        android:id="@+id/barra_gps_strength"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:background="#CC121416"
+        android:orientation="horizontal"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
+        android:gravity="center_vertical">
+
+        <View
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:background="@drawable/shape_scan_btn" />
+
+        <TextView
+            android:id="@+id/label_gps_strength"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="GPS STRENGTH"
+            android:textColor="@color/primary"
+            android:textSize="11sp"
+            android:letterSpacing="0.1"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="12dp" />
+
+        <!-- Barra de fuerza de señal (5 segmentos) -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:weightSum="5">
+
+            <View android:id="@+id/gps_bar1" android:layout_width="0dp" android:layout_height="6dp" android:layout_weight="1" android:layout_marginEnd="2dp" android:background="@color/primary" />
+            <View android:id="@+id/gps_bar2" android:layout_width="0dp" android:layout_height="6dp" android:layout_weight="1" android:layout_marginEnd="2dp" android:background="@color/primary" />
+            <View android:id="@+id/gps_bar3" android:layout_width="0dp" android:layout_height="6dp" android:layout_weight="1" android:layout_marginEnd="2dp" android:background="@color/primary" />
+            <View android:id="@+id/gps_bar4" android:layout_width="0dp" android:layout_height="6dp" android:layout_weight="1" android:layout_marginEnd="2dp" android:background="@color/surface_container_high" />
+            <View android:id="@+id/gps_bar5" android:layout_width="0dp" android:layout_height="6dp" android:layout_weight="1" android:background="@color/surface_container_high" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Visor central con corchetes -->
+    <com.geoar.guatemala.ViewfinderView
+        android:id="@+id/viewfinder"
+        android:layout_width="220dp"
+        android:layout_height="220dp"
+        android:layout_gravity="center"
+        android:layout_marginBottom="60dp" />
+
+    <!-- Panel inferior: estado del análisis + resultado -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:paddingBottom="80dp">
+
+        <!-- Estado del escaneo (pasos) -->
+        <LinearLayout
+            android:id="@+id/panel_estado_scan"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:paddingBottom="12dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/scan_step1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="12sp"
+                android:letterSpacing="0.05"
+                android:layout_marginBottom="6dp" />
+
+            <TextView
+                android:id="@+id/scan_step2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="12sp"
+                android:letterSpacing="0.05"
+                android:layout_marginBottom="6dp" />
+
+            <TextView
+                android:id="@+id/scan_step3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="12sp"
+                android:letterSpacing="0.05" />
+
+        </LinearLayout>
+
+        <!-- Resultado del escaneo -->
+        <LinearLayout
+            android:id="@+id/panel_resultado_scan"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/surface_container_low"
+            android:orientation="vertical"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="20dp"
+            android:paddingBottom="20dp"
+            android:visibility="gone">
+
+            <!-- Nombre + elevación en la misma línea -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="4dp">
+
+                <TextView
+                    android:id="@+id/resultado_nombre"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="@color/on_surface"
+                    android:textSize="26sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/resultado_elevacion"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+            <!-- Badge de tipo -->
+            <TextView
+                android:id="@+id/resultado_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:paddingTop="3dp"
+                android:paddingBottom="3dp"
+                android:layout_marginBottom="10dp"
+                android:background="@drawable/shape_badge" />
+
+            <!-- Descripción breve -->
+            <TextView
+                android:id="@+id/resultado_descripcion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="13sp"
+                android:lineSpacingMultiplier="1.4"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Botones -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="end">
+
+                <Button
+                    android:id="@+id/btn_cerrar_resultado"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_cerrar"
+                    android:textColor="@color/on_surface_variant" />
+
+                <Button
+                    android:id="@+id/btn_ver_en_maps"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="@string/btn_ver_en_maps"
+                    android:textColor="@color/on_primary"
+                    app:backgroundTint="@color/primary"
+                    xmlns:app="http://schemas.android.com/apk/res-auto" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</FrameLayout>

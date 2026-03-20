@@ -4,18 +4,26 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/black">
+    android:background="@color/surface">
 
-    <!-- Pantalla de permisos -->
+    <!-- ===== CÁMARA (siempre detrás, visible en Explorer y Scan) ===== -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/camera_preview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:implementationMode="performance"
+        app:scaleType="fillCenter" />
+
+    <!-- ===== PANTALLA DE PERMISOS ===== -->
     <LinearLayout
         android:id="@+id/pantalla_permisos"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@android:color/black"
+        android:background="@color/surface"
         android:gravity="center"
         android:orientation="vertical"
         android:padding="32dp"
-        android:visibility="visible">
+        android:visibility="gone">
 
         <TextView
             android:layout_width="wrap_content"
@@ -28,7 +36,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/titulo_permisos"
-            android:textColor="@android:color/white"
+            android:textColor="@color/on_surface"
             android:textSize="22sp"
             android:textStyle="bold"
             android:gravity="center"
@@ -38,7 +46,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/descripcion_permisos"
-            android:textColor="#BDBDBD"
+            android:textColor="@color/on_surface_variant"
             android:textSize="15sp"
             android:gravity="center"
             android:lineSpacingMultiplier="1.4"
@@ -51,127 +59,180 @@
             android:text="@string/btn_otorgar_permisos"
             android:paddingHorizontal="32dp"
             android:paddingVertical="12dp"
-            app:backgroundTint="@color/color_volcan_activo" />
+            android:textColor="@color/on_primary"
+            app:backgroundTint="@color/primary" />
 
     </LinearLayout>
 
-    <!-- Contenido principal -->
-    <FrameLayout
-        android:id="@+id/contenido_principal"
+    <!-- ===== EXPLORER SCREEN (overlay AR sobre cámara) ===== -->
+    <include
+        android:id="@+id/screen_explorer"
+        layout="@layout/screen_explorer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:visibility="gone" />
+
+    <!-- ===== SCAN SCREEN (visor + animación + resultado) ===== -->
+    <include
+        android:id="@+id/screen_scan"
+        layout="@layout/screen_scan"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
+    <!-- ===== HISTORY SCREEN (fondo sólido, lista de escaneos) ===== -->
+    <include
+        android:id="@+id/screen_history"
+        layout="@layout/screen_history"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
+    <!-- ===== TOP BAR (siempre visible cuando hay permisos) ===== -->
+    <LinearLayout
+        android:id="@+id/top_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:background="#CC121416"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
         android:visibility="gone">
 
-        <!-- Preview de cámara fullscreen -->
-        <androidx.camera.view.PreviewView
-            android:id="@+id/camera_preview"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            app:implementationMode="performance"
-            app:scaleType="fillCenter" />
-
-        <!-- Overlay AR -->
-        <com.geoar.guatemala.CameraOverlayView
-            android:id="@+id/ar_overlay"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-
-        <!-- Botón info (esquina superior derecha) -->
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/btn_info"
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="top|end"
-            android:layout_margin="16dp"
-            android:contentDescription="@string/btn_info_descripcion"
-            android:src="@android:drawable/ic_menu_info_details"
-            app:backgroundTint="@color/color_boton_info"
-            app:tint="@android:color/white"
-            app:fabSize="mini" />
+            android:text="≡"
+            android:textColor="@color/on_surface"
+            android:textSize="22sp"
+            android:layout_marginEnd="12dp" />
 
-        <!-- Botón escanear estilo Google Lens (centro inferior) -->
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/btn_escanear"
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/app_display_name"
+            android:textColor="@color/on_surface"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.05" />
+
+        <TextView
+            android:id="@+id/label_tab_status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom|center_horizontal"
-            android:layout_marginBottom="40dp"
-            android:contentDescription="@string/btn_escanear_descripcion"
-            android:src="@android:drawable/ic_menu_camera"
-            app:backgroundTint="@color/color_boton_escanear"
-            app:tint="@android:color/white"
-            app:fabSize="normal" />
+            android:textColor="@color/primary"
+            android:textSize="10sp"
+            android:letterSpacing="0.1"
+            android:layout_marginEnd="12dp"
+            android:visibility="gone" />
 
-        <!-- Panel de resultado del escaneo (se muestra al pulsar Escanear) -->
+        <!-- Avatar placeholder -->
+        <TextView
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:gravity="center"
+            android:text="JL"
+            android:textColor="@color/on_primary"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:background="@drawable/shape_scan_btn" />
+
+    </LinearLayout>
+
+    <!-- ===== BOTTOM NAV (siempre visible cuando hay permisos) ===== -->
+    <LinearLayout
+        android:id="@+id/bottom_nav"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:layout_gravity="bottom"
+        android:background="#EE0C0E10"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:visibility="gone">
+
+        <!-- Tab: Explorer -->
         <LinearLayout
-            android:id="@+id/panel_resultado"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom"
-            android:background="#E6000000"
-            android:orientation="vertical"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:paddingTop="20dp"
-            android:paddingBottom="32dp"
-            android:visibility="gone">
+            android:id="@+id/tab_explorer"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
 
-            <!-- Nombre del accidente -->
-            <TextView
-                android:id="@+id/resultado_nombre"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@android:color/white"
-                android:textSize="22sp"
-                android:textStyle="bold"
+            <ImageView
+                android:id="@+id/icon_explorer"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_nav_explorer"
                 android:layout_marginBottom="4dp" />
 
-            <!-- Tipo · distancia · elevación -->
             <TextView
-                android:id="@+id/resultado_tipo_distancia"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="#90CAF9"
-                android:textSize="13sp"
-                android:layout_marginBottom="12dp" />
-
-            <!-- Descripción -->
-            <TextView
-                android:id="@+id/resultado_descripcion"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="#E0E0E0"
-                android:textSize="14sp"
-                android:lineSpacingMultiplier="1.4"
-                android:layout_marginBottom="20dp" />
-
-            <!-- Botones -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="end">
-
-                <Button
-                    android:id="@+id/btn_cerrar_resultado"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/btn_cerrar"
-                    android:textColor="#BDBDBD" />
-
-                <Button
-                    android:id="@+id/btn_ver_en_maps"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:text="@string/btn_ver_en_maps"
-                    app:backgroundTint="@color/color_boton_maps" />
-
-            </LinearLayout>
+                android:text="@string/nav_explorer"
+                android:textColor="@color/primary"
+                android:textSize="9sp"
+                android:letterSpacing="0.08" />
 
         </LinearLayout>
 
-    </FrameLayout>
+        <!-- Tab: Scan (centro elevado) -->
+        <FrameLayout
+            android:id="@+id/tab_scan"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center">
+
+            <LinearLayout
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_gravity="center"
+                android:layout_marginBottom="12dp"
+                android:gravity="center"
+                android:background="@drawable/shape_scan_btn"
+                android:elevation="6dp">
+
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@drawable/ic_scan" />
+
+            </LinearLayout>
+
+        </FrameLayout>
+
+        <!-- Tab: Archive -->
+        <LinearLayout
+            android:id="@+id/tab_archive"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/icon_archive"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_nav_archive"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/nav_archive"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="9sp"
+                android:letterSpacing="0.08" />
+
+        </LinearLayout>
+
+    </LinearLayout>
 
 </FrameLayout>

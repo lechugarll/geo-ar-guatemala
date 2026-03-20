@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pantalla Explorer: overlay AR sobre la cámara + barra de estado inferior -->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Overlay AR (etiquetas de accidentes geográficos) -->
+    <com.geoar.guatemala.CameraOverlayView
+        android:id="@+id/ar_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Barra de estado GPS/Brújula (inferior) -->
+    <LinearLayout
+        android:id="@+id/barra_estado"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="#CC121416"
+        android:orientation="vertical"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="86dp">
+
+        <!-- Coordenadas grandes -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:id="@+id/coord_lat"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/on_surface"
+                android:textSize="28sp"
+                android:textStyle="bold"
+                android:letterSpacing="-0.02"
+                android:text="--.-°N" />
+
+            <TextView
+                android:id="@+id/coord_lon"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/on_surface"
+                android:textSize="28sp"
+                android:textStyle="bold"
+                android:letterSpacing="-0.02"
+                android:gravity="end"
+                android:text="--.-°W" />
+
+        </LinearLayout>
+
+        <!-- GPS precision + Brújula estado -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/estado_gps"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/primary"
+                android:textSize="11sp"
+                android:letterSpacing="0.08"
+                android:text="● GPS: BUSCANDO…" />
+
+            <TextView
+                android:id="@+id/estado_brujula"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="11sp"
+                android:letterSpacing="0.08"
+                android:gravity="end"
+                android:text="BRÚJULA: —" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Label "READY TO ANALYZE" centrado -->
+    <TextView
+        android:id="@+id/label_ready"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:textColor="#80E2E2E5"
+        android:textSize="12sp"
+        android:letterSpacing="0.15"
+        android:text="READY TO ANALYZE" />
+
+</FrameLayout>
