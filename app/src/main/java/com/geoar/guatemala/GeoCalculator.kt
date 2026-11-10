@@ -1,30 +1,48 @@
 package com.geoar.guatemala
 
-import android.graphics.PointF
 import com.geoar.guatemala.models.LugarGeografico
 import kotlin.math.*
 
 /**
- * Datos calculados de un punto geográfico visible en pantalla.
+ * Lugar geográfico con sus datos calculados respecto a la posición del usuario.
+ * Solo depende del GPS (no de la orientación), por lo que se recalcula
+ * únicamente cuando cambia la ubicación.
  */
-data class PuntoVisible(
-    val bearing: Double,         // Dirección hacia el punto (0-360°, 0=Norte)
+data class Candidato(
+    val lugar: LugarGeografico,
+    val bearing: Double,         // Dirección hacia el punto (0-360°, 0 = Norte verdadero)
     val distanciaKm: Double,     // Distancia en kilómetros
-    val anguloElevacion: Double, // Ángulo vertical respecto al horizonte (+ = arriba)
-    val difHorizontal: Double,   // Diferencia entre bearing y azimuth actual (+ = derecha)
-    val difVertical: Double      // Diferencia entre ángulo de elevación y pitch actual (+ = arriba)
+    val anguloElevacion: Double  // Ángulo vertical respecto al horizonte (+ = arriba)
 )
 
 /**
- * Módulo de cálculo geográfico y AR.
- * Todas las funciones son puras (sin estado), aptas para tests unitarios.
+ * Módulo de cálculo geográfico.
+ * Todas las funciones son puras (sin estado ni dependencias de Android),
+ * aptas para tests unitarios en la JVM.
  */
 object GeoCalculator
 {
     private const val RADIO_TIERRA_KM = 6371.0
+
+    // Coeficiente de refracción atmosférica estándar: la luz se curva levemente
+    // hacia abajo, lo que equivale a una Tierra un poco más grande.
+    private const val COEF_REFRACCION = 0.13
+    private const val RADIO_EFECTIVO_M = RADIO_TIERRA_KM * 1000.0 / (1.0 - COEF_REFRACCION)
+
     const val DISTANCIA_MAXIMA_KM = 150.0
-    const val MARGEN_HORIZONTAL_GRADOS = 12.0
-    const val MARGEN_VERTICAL_GRADOS = 20.0
+
+    // Distancia mínima: si el usuario está parado sobre el lugar no tiene sentido etiquetarlo
+    const val DISTANCIA_MINIMA_KM = 0.2
+
+    // Un lago solo se ve de lejos si el usuario lo mira desde arriba
+    private const val LAGO_DISTANCIA_SIEMPRE_VISIBLE_KM = 5.0
+    private const val LAGO_DISTANCIA_MAXIMA_KM = 60.0
+    private const val LAGO_ANGULO_MAXIMO_GRADOS = -2.0
+
+    // Sin modelo de terreno no se sabe qué tapa a qué. Como aproximación, un lugar
+    // lejano que queda por debajo de la horizontal casi siempre está tapado por
+    // el relieve intermedio, así que no se etiqueta.
+    private const val DISTANCIA_EXIGE_SOBRE_HORIZONTE_KM = 40.0
 
     /**
      * Calcula el bearing esférico desde el punto 1 hacia el punto 2.
@@ -60,9 +78,14 @@ object GeoCalculator
     }
 
     /**
-     * Calcula el ángulo de elevación vertical hacia un punto geográfico.
-     * Resultado positivo = punto está por encima del horizonte del usuario.
-     * Resultado negativo = punto está por debajo (ej: lago desde una montaña).
+     * Calcula el ángulo de elevación vertical hacia un punto geográfico,
+     * corrigiendo por la curvatura de la Tierra y la refracción atmosférica.
+     *
+     * A 100 km la curvatura "hunde" el punto unos 680 m, así que ignorarla
+     * dibujaría las etiquetas lejanas demasiado arriba.
+     *
+     * Resultado positivo = punto por encima del horizonte del usuario.
+     * Resultado negativo = punto por debajo (ej: lago visto desde una montaña).
      *
      * @param distanciaKm       Distancia horizontal al punto
      * @param elevacionUsuarioM Elevación del usuario en metros
@@ -76,30 +99,91 @@ object GeoCalculator
     {
         if (distanciaKm == 0.0) return 0.0
 
-        val diferenciaAlturaM = (elevacionPuntoM - elevacionUsuarioM).toDouble()
         val distanciaM = distanciaKm * 1000.0
+        val caidaPorCurvaturaM = distanciaM * distanciaM / (2.0 * RADIO_EFECTIVO_M)
+        val diferenciaAlturaM = (elevacionPuntoM - elevacionUsuarioM).toDouble() - caidaPorCurvaturaM
+
         return Math.toDegrees(atan2(diferenciaAlturaM, distanciaM))
     }
 
     /**
-     * Filtra los puntos geográficos visibles dado el azimuth y pitch actuales.
+     * Indica si un punto queda oculto detrás de la curvatura de la Tierra
+     * (suponiendo terreno al nivel del mar entre el usuario y el punto).
      *
-     * El pitch debe estar en el sistema de coordenadas remapeado para portrait:
-     * 0° = mirando al horizonte, + = mirando hacia arriba, - = mirando hacia abajo.
+     * Desde una altura h el horizonte queda a sqrt(2·R·h). Más allá de esa
+     * distancia solo se ve lo que sobresale por encima de la línea de visión.
+     */
+    fun estaOcultoPorCurvatura(
+        distanciaKm: Double,
+        elevacionUsuarioM: Int,
+        elevacionPuntoM: Int
+    ): Boolean
+    {
+        val distanciaM = distanciaKm * 1000.0
+        val alturaUsuario = elevacionUsuarioM.coerceAtLeast(0).toDouble()
+        val distanciaHorizonteM = sqrt(2.0 * RADIO_EFECTIVO_M * alturaUsuario)
+
+        if (distanciaM <= distanciaHorizonteM) return false
+
+        val masAllaDelHorizonteM = distanciaM - distanciaHorizonteM
+        val alturaMinimaVisibleM = masAllaDelHorizonteM * masAllaDelHorizonteM / (2.0 * RADIO_EFECTIVO_M)
+
+        return elevacionPuntoM < alturaMinimaVisibleM
+    }
+
+    /**
+     * Decide si un lugar puede verse desde la posición del usuario.
+     * No usa modelo de terreno: descarta lo que queda tras la curvatura,
+     * los lagos que no se están mirando desde arriba y los lugares lejanos
+     * que quedan por debajo de la horizontal.
+     */
+    fun esPotencialmenteVisible(
+        tipo: String,
+        distanciaKm: Double,
+        elevacionUsuarioM: Int,
+        elevacionPuntoM: Int,
+        distanciaMaxKm: Double = DISTANCIA_MAXIMA_KM
+    ): Boolean
+    {
+        if (distanciaKm > distanciaMaxKm) return false
+        if (distanciaKm < DISTANCIA_MINIMA_KM) return false
+        if (estaOcultoPorCurvatura(distanciaKm, elevacionUsuarioM, elevacionPuntoM)) return false
+
+        val anguloElevacion = calcularAnguloElevacion(
+            distanciaKm, elevacionUsuarioM, elevacionPuntoM
+        )
+
+        if (tipo == "lago" || tipo == "laguna")
+        {
+            if (distanciaKm <= LAGO_DISTANCIA_SIEMPRE_VISIBLE_KM) return true
+
+            return distanciaKm <= LAGO_DISTANCIA_MAXIMA_KM &&
+                   anguloElevacion <= LAGO_ANGULO_MAXIMO_GRADOS
+        }
+
+        if (distanciaKm > DISTANCIA_EXIGE_SOBRE_HORIZONTE_KM && anguloElevacion < 0.0)
+        {
+            return false
+        }
+
+        return true
+    }
+
+    /**
+     * Calcula bearing, distancia y ángulo de elevación de todos los lugares
+     * que podrían verse desde la posición del usuario.
      *
      * Devuelve la lista ordenada por distancia (más cercano primero).
      */
-    fun filtrarPuntosVisibles(
+    fun calcularCandidatos(
         latUsuario: Double,
         lonUsuario: Double,
         elevacionUsuarioM: Int,
-        azimuth: Float,
-        pitch: Float,
         todos: List<LugarGeografico>,
         distanciaMaxKm: Double = DISTANCIA_MAXIMA_KM
-    ): List<Pair<LugarGeografico, PuntoVisible>>
+    ): List<Candidato>
     {
-        val resultado = mutableListOf<Pair<LugarGeografico, PuntoVisible>>()
+        val resultado = mutableListOf<Candidato>()
 
         for (lugar in todos)
         {
@@ -109,128 +193,38 @@ object GeoCalculator
             )
             if (distancia > distanciaMaxKm) continue
 
-            val bearing = calcularBearing(
-                latUsuario, lonUsuario,
-                lugar.latitud, lugar.longitud
-            )
+            if (!esPotencialmenteVisible(
+                    lugar.tipo, distancia, elevacionUsuarioM, lugar.elevacionMsnm, distanciaMaxKm
+                ))
+            {
+                continue
+            }
+
             val anguloElevacion = calcularAnguloElevacion(
                 distancia,
                 elevacionUsuarioM,
                 lugar.elevacionMsnm
             )
 
-            // Diferencia angular horizontal (manejo de wrap-around 0/360°)
-            var difHorizontal = bearing - azimuth.toDouble()
-            if (difHorizontal > 180.0) difHorizontal -= 360.0
-            if (difHorizontal < -180.0) difHorizontal += 360.0
-
-            // Diferencia angular vertical
-            // pitch > 0 = cámara apuntando arriba, anguloElevacion > 0 = punto sobre el horizonte
-            val difVertical = anguloElevacion - pitch.toDouble()
-
-            if (abs(difHorizontal) <= MARGEN_HORIZONTAL_GRADOS &&
-                abs(difVertical) <= MARGEN_VERTICAL_GRADOS)
-            {
-                resultado.add(
-                    Pair(
-                        lugar,
-                        PuntoVisible(
-                            bearing = bearing,
-                            distanciaKm = distancia,
-                            anguloElevacion = anguloElevacion,
-                            difHorizontal = difHorizontal,
-                            difVertical = difVertical
-                        )
-                    )
-                )
-            }
-        }
-
-        return resultado.sortedBy { it.second.distanciaKm }
-    }
-
-    /**
-     * Convierte la posición angular relativa (difHorizontal, difVertical) a
-     * coordenadas en píxeles dentro de la pantalla.
-     *
-     * El centro de la pantalla corresponde a difHorizontal=0, difVertical=0.
-     * difHorizontal positivo = derecha en pantalla.
-     * difVertical positivo = arriba en pantalla.
-     */
-    /**
-     * Modo escaneo tipo Google Lens: devuelve los mejores candidatos geográficos
-     * en la dirección actual sin restricción de margen, ordenados por proximidad angular.
-     * Útil para el botón "Escanear" que identifica qué está viendo el usuario.
-     */
-    fun escanear(
-        latUsuario: Double,
-        lonUsuario: Double,
-        elevacionUsuarioM: Int,
-        azimuth: Float,
-        pitch: Float,
-        todos: List<LugarGeografico>,
-        distanciaMaxKm: Double = DISTANCIA_MAXIMA_KM,
-        maxResultados: Int = 3
-    ): List<Pair<LugarGeografico, PuntoVisible>>
-    {
-        data class Candidato(val lugar: LugarGeografico, val punto: PuntoVisible, val error: Double)
-
-        val candidatos = mutableListOf<Candidato>()
-
-        for (lugar in todos)
-        {
-            val distancia = calcularDistanciaKm(latUsuario, lonUsuario, lugar.latitud, lugar.longitud)
-            if (distancia > distanciaMaxKm) continue
-
-            val bearing = calcularBearing(latUsuario, lonUsuario, lugar.latitud, lugar.longitud)
-            val anguloElevacion = calcularAnguloElevacion(distancia, elevacionUsuarioM, lugar.elevacionMsnm)
-
-            var difHorizontal = bearing - azimuth.toDouble()
-            if (difHorizontal > 180.0) difHorizontal -= 360.0
-            if (difHorizontal < -180.0) difHorizontal += 360.0
-
-            val difVertical = anguloElevacion - pitch.toDouble()
-
-            // Error combinado: horizontal pesa más porque el pitch es menos confiable sin brújula
-            val error = Math.sqrt(difHorizontal * difHorizontal + difVertical * difVertical * 0.3)
-
-            candidatos.add(
-                Candidato(
-                    lugar,
-                    PuntoVisible(
-                        bearing = bearing,
-                        distanciaKm = distancia,
-                        anguloElevacion = anguloElevacion,
-                        difHorizontal = difHorizontal,
-                        difVertical = difVertical
-                    ),
-                    error
-                )
+            val bearing = calcularBearing(
+                latUsuario, lonUsuario,
+                lugar.latitud, lugar.longitud
             )
+
+            resultado.add(Candidato(lugar, bearing, distancia, anguloElevacion))
         }
 
-        return candidatos
-            .sortedBy { it.error }
-            .take(maxResultados)
-            .map { Pair(it.lugar, it.punto) }
+        return resultado.sortedBy { it.distanciaKm }
     }
 
-    fun calcularPosicionEnPantalla(
-        difHorizontal: Double,
-        difVertical: Double,
-        screenWidth: Int,
-        screenHeight: Int
-    ): PointF
+    /**
+     * Convierte un azimuth en grados a su punto cardinal abreviado (N, NE, E...).
+     */
+    fun puntoCardinal(azimuth: Double): String
     {
-        val cx = screenWidth / 2f
-        val cy = screenHeight / 2f
-
-        val x = cx + ((difHorizontal / MARGEN_HORIZONTAL_GRADOS) * cx).toFloat()
-        val y = cy - ((difVertical / MARGEN_VERTICAL_GRADOS) * cy).toFloat()
-
-        return PointF(
-            x.coerceIn(0f, screenWidth.toFloat()),
-            y.coerceIn(0f, screenHeight.toFloat())
-        )
+        val nombres = arrayOf("N", "NE", "E", "SE", "S", "SO", "O", "NO")
+        val normalizado = ((azimuth % 360.0) + 360.0) % 360.0
+        val indice = ((normalizado + 22.5) / 45.0).toInt() % 8
+        return nombres[indice]
     }
 }

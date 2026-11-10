@@ -1,5 +1,6 @@
 package com.geoar.guatemala
 
+import com.geoar.guatemala.models.LugarGeografico
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -8,7 +9,7 @@ import kotlin.math.abs
 /**
  * Tests unitarios para GeoCalculator.
  * Verifican la corrección de bearing, distancia Haversine, ángulo de elevación
- * y el filtrado de puntos visibles.
+ * (con curvatura terrestre) y el cálculo de candidatos visibles.
  *
  * Ejecutar con: ./gradlew test
  */
@@ -86,7 +87,7 @@ class GeoCalculatorTest
     }
 
     @Test
-    fun `distancia de Ciudad de Guatemala a Volcan Pacaya debe ser aproximadamente 47 km`()
+    fun `distancia de Ciudad de Guatemala a Volcan Pacaya debe ser aproximadamente 30 km`()
     {
         // Ciudad de Guatemala aprox 14.6349, -90.5069
         // Volcán Pacaya: 14.3814, -90.6014
@@ -94,7 +95,7 @@ class GeoCalculatorTest
             14.6349, -90.5069,
             14.3814, -90.6014
         )
-        assertEquals(47.0, distancia, 3.0) // tolerancia ±3 km
+        assertEquals(30.0, distancia, 2.0) // tolerancia ±2 km
     }
 
     @Test
@@ -149,139 +150,171 @@ class GeoCalculatorTest
     }
 
     // -------------------------------------------------------------------------
-    // calcularPosicionEnPantalla
+    // Curvatura de la Tierra y horizonte
     // -------------------------------------------------------------------------
 
     @Test
-    fun `posicion 0,0 debe estar en el centro de la pantalla`()
+    fun `la curvatura debe bajar el angulo de un punto lejano a la misma altura`()
     {
-        val posicion = GeoCalculator.calcularPosicionEnPantalla(
-            difHorizontal = 0.0,
-            difVertical = 0.0,
-            screenWidth = 1080,
-            screenHeight = 1920
-        )
-        assertEquals(540f, posicion.x, 0.1f)
-        assertEquals(960f, posicion.y, 0.1f)
+        // A 100 km y a la misma elevación, el punto queda bajo la horizontal
+        val angulo = GeoCalculator.calcularAnguloElevacion(100.0, 1500, 1500)
+        assertTrue(angulo < -0.3 && angulo > -0.5)
     }
 
     @Test
-    fun `diferencia horizontal positiva debe estar a la derecha del centro`()
+    fun `la curvatura casi no afecta a un punto cercano`()
     {
-        val posicion = GeoCalculator.calcularPosicionEnPantalla(
-            difHorizontal = 6.0, // mitad del margen horizontal
-            difVertical = 0.0,
-            screenWidth = 1080,
-            screenHeight = 1920
-        )
-        assertTrue(posicion.x > 1080 / 2f)
+        // A 5 km la caída por curvatura es de menos de 2 m
+        val angulo = GeoCalculator.calcularAnguloElevacion(5.0, 1500, 2500)
+        assertEquals(11.3, angulo, 0.1)
     }
 
     @Test
-    fun `diferencia vertical positiva debe estar arriba del centro`()
+    fun `punto cercano nunca queda oculto por la curvatura`()
     {
-        val posicion = GeoCalculator.calcularPosicionEnPantalla(
-            difHorizontal = 0.0,
-            difVertical = 10.0, // arriba del horizonte
-            screenWidth = 1080,
-            screenHeight = 1920
-        )
-        assertTrue(posicion.y < 1920 / 2f)
+        // Desde 2500 m el horizonte está a ~190 km: un lago a 10 km se ve aunque esté más abajo
+        assertTrue(!GeoCalculator.estaOcultoPorCurvatura(10.0, 2500, 1562))
     }
 
     @Test
-    fun `posicion debe estar dentro de los limites de pantalla`()
+    fun `punto bajo y lejano queda oculto por la curvatura`()
     {
-        val posicion = GeoCalculator.calcularPosicionEnPantalla(
-            difHorizontal = 999.0, // valor extremo
-            difVertical = 999.0,
-            screenWidth = 1080,
-            screenHeight = 1920
-        )
-        assertTrue(posicion.x >= 0f && posicion.x <= 1080f)
-        assertTrue(posicion.y >= 0f && posicion.y <= 1920f)
+        // Desde 2 m de altura el horizonte está a ~5 km; a 140 km solo se ve lo que pase de ~1200 m
+        assertTrue(GeoCalculator.estaOcultoPorCurvatura(140.0, 2, 200))
+        assertTrue(!GeoCalculator.estaOcultoPorCurvatura(140.0, 2, 3760))
     }
 
     // -------------------------------------------------------------------------
-    // filtrarPuntosVisibles — integración
+    // esPotencialmenteVisible
     // -------------------------------------------------------------------------
 
     @Test
-    fun `desde Ciudad de Guatemala mirando norte el Volcan Tajumulco deberia ser visible`()
+    fun `lago lejano a mayor o igual altura que el usuario no es visible`()
     {
-        // Volcán Tajumulco está al noroeste a ~210 km, fuera del rango por defecto (150 km).
-        // Reducimos el rango máximo a 250 km para este test.
-        val tajumulco = com.geoar.guatemala.models.LugarGeografico(
-            id = 1,
-            nombre = "Volcán Tajumulco",
-            tipo = "volcan",
-            latitud = 15.0342,
-            longitud = -91.9003,
-            elevacionMsnm = 4220,
-            descripcion = "El volcán más alto de Centroamérica",
+        // Atitlán (1562 msnm) desde Ciudad de Guatemala (1500 msnm) a ~75 km
+        assertTrue(!GeoCalculator.esPotencialmenteVisible("lago", 75.0, 1500, 1562))
+    }
+
+    @Test
+    fun `lago visto desde arriba si es visible`()
+    {
+        // Atitlán desde un mirador a 2500 msnm a 10 km
+        assertTrue(GeoCalculator.esPotencialmenteVisible("lago", 10.0, 2500, 1562))
+    }
+
+    @Test
+    fun `lago muy cercano siempre es visible`()
+    {
+        assertTrue(GeoCalculator.esPotencialmenteVisible("laguna", 2.0, 1565, 1562))
+    }
+
+    @Test
+    fun `lugar tras la curvatura no es visible`()
+    {
+        assertTrue(!GeoCalculator.esPotencialmenteVisible("cerro", 140.0, 2, 200))
+    }
+
+    @Test
+    fun `cerro lejano por debajo de la horizontal no se etiqueta`()
+    {
+        // Cerro de 900 m a 110 km visto desde 1500 m: queda bajo la horizontal
+        assertTrue(!GeoCalculator.esPotencialmenteVisible("cerro", 110.0, 1500, 900))
+        // El mismo cerro de cerca sí se etiqueta
+        assertTrue(GeoCalculator.esPotencialmenteVisible("cerro", 8.0, 1500, 900))
+    }
+
+    @Test
+    fun `volcan lejano que sobresale sobre la horizontal si se etiqueta`()
+    {
+        // Volcán de Agua (3760 m) a 32 km y Santa María (3772 m) a 113 km desde la capital
+        assertTrue(GeoCalculator.esPotencialmenteVisible("volcan", 32.0, 1500, 3760))
+        assertTrue(GeoCalculator.esPotencialmenteVisible("volcan", 113.0, 1500, 3772))
+    }
+
+    @Test
+    fun `lugar bajo los pies del usuario no se etiqueta`()
+    {
+        assertTrue(!GeoCalculator.esPotencialmenteVisible("volcan", 0.05, 3760, 3763))
+    }
+
+    // -------------------------------------------------------------------------
+    // calcularCandidatos — integración
+    // -------------------------------------------------------------------------
+
+    private fun lugar(
+        nombre: String,
+        tipo: String,
+        latitud: Double,
+        longitud: Double,
+        elevacion: Int
+    ): LugarGeografico
+    {
+        return LugarGeografico(
+            id = nombre.hashCode(),
+            nombre = nombre,
+            tipo = tipo,
+            latitud = latitud,
+            longitud = longitud,
+            elevacionMsnm = elevacion,
+            descripcion = "Lugar de prueba",
             activo = false
         )
-
-        // Bearing desde Ciudad de Guatemala (14.63, -90.50) a Tajumulco (15.03, -91.90)
-        // es aproximadamente 290° (noroeste)
-        val bearing = GeoCalculator.calcularBearing(
-            14.634915, -90.506882,
-            tajumulco.latitud, tajumulco.longitud
-        )
-        assertTrue(bearing > 270.0 && bearing < 320.0)
     }
 
     @Test
-    fun `punto fuera del rango maximo no debe aparecer en resultados`()
+    fun `punto fuera del rango maximo no debe aparecer en candidatos`()
     {
-        val lugarLejano = com.geoar.guatemala.models.LugarGeografico(
-            id = 99,
-            nombre = "Lugar muy lejano",
-            tipo = "cerro",
-            latitud = 20.0,  // muy al norte
-            longitud = -90.0,
-            elevacionMsnm = 1000,
-            descripcion = "Muy lejos",
-            activo = false
-        )
+        val lugarLejano = lugar("Lugar muy lejano", "cerro", 20.0, -90.0, 1000)
 
-        val resultado = GeoCalculator.filtrarPuntosVisibles(
+        val resultado = GeoCalculator.calcularCandidatos(
             latUsuario = 14.634915,
             lonUsuario = -90.506882,
             elevacionUsuarioM = 1500,
-            azimuth = 0f,
-            pitch = 0f,
-            todos = listOf(lugarLejano),
-            distanciaMaxKm = GeoCalculator.DISTANCIA_MAXIMA_KM
+            todos = listOf(lugarLejano)
         )
 
         assertTrue(resultado.isEmpty())
     }
 
     @Test
-    fun `punto directamente al norte con azimuth 0 debe aparecer en resultados`()
+    fun `candidatos deben venir ordenados por distancia con sus datos calculados`()
     {
-        val lugarAlNorte = com.geoar.guatemala.models.LugarGeografico(
-            id = 100,
-            nombre = "Cerro al norte",
-            tipo = "cerro",
-            latitud = 14.734915,  // 0.1° al norte (~11 km)
-            longitud = -90.506882,
-            elevacionMsnm = 1500,
-            descripcion = "Cerro de prueba",
-            activo = false
-        )
+        val agua = lugar("Volcán de Agua", "volcan", 14.4655, -90.7430, 3760)
+        val pacaya = lugar("Volcán Pacaya", "volcan", 14.3813, -90.6011, 2552)
+        val tajumulco = lugar("Volcán Tajumulco", "volcan", 15.0342, -91.9003, 4220)
 
-        val resultado = GeoCalculator.filtrarPuntosVisibles(
+        val resultado = GeoCalculator.calcularCandidatos(
             latUsuario = 14.634915,
             lonUsuario = -90.506882,
             elevacionUsuarioM = 1500,
-            azimuth = 0f,   // mirando al norte
-            pitch = 0f,     // mirando al horizonte
-            todos = listOf(lugarAlNorte)
+            todos = listOf(tajumulco, pacaya, agua)
         )
 
-        assertTrue(resultado.isNotEmpty())
-        assertEquals("Cerro al norte", resultado.first().first.nombre)
+        // Tajumulco está a ~156 km: fuera del rango de 150 km
+        assertEquals(2, resultado.size)
+        assertEquals("Volcán Pacaya", resultado[0].lugar.nombre)
+        assertEquals("Volcán de Agua", resultado[1].lugar.nombre)
+
+        // Agua queda al suroeste de la capital y por encima del horizonte
+        val candidatoAgua = resultado[1]
+        assertTrue(candidatoAgua.bearing > 220.0 && candidatoAgua.bearing < 250.0)
+        assertTrue(candidatoAgua.anguloElevacion > 3.0 && candidatoAgua.anguloElevacion < 6.0)
+    }
+
+    // -------------------------------------------------------------------------
+    // puntoCardinal
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `punto cardinal debe corresponder al azimuth`()
+    {
+        assertEquals("N", GeoCalculator.puntoCardinal(0.0))
+        assertEquals("N", GeoCalculator.puntoCardinal(359.0))
+        assertEquals("NE", GeoCalculator.puntoCardinal(45.0))
+        assertEquals("E", GeoCalculator.puntoCardinal(90.0))
+        assertEquals("S", GeoCalculator.puntoCardinal(180.0))
+        assertEquals("SO", GeoCalculator.puntoCardinal(225.0))
+        assertEquals("O", GeoCalculator.puntoCardinal(270.0))
+        assertEquals("NO", GeoCalculator.puntoCardinal(-45.0))
     }
 }

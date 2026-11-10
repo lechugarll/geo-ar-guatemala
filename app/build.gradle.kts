@@ -52,6 +52,9 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:1.4.1")
     implementation("androidx.camera:camera-view:1.4.1")
 
+    // Anotación OptIn para leer la óptica de la cámara (Camera2 interop)
+    implementation("androidx.annotation:annotation-experimental:1.4.1")
+
     // Gson para parseo de JSON
     implementation("com.google.code.gson:gson:2.11.0")
 

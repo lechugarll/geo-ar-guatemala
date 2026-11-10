@@ -8,12 +8,24 @@
     <string name="btn_otorgar_permisos">Otorgar permisos</string>
 
     <!-- Botones -->
-    <string name="btn_info_descripcion">Información del lugar más cercano</string>
-    <string name="btn_escanear_descripcion">Escanear accidente geográfico</string>
+    <string name="btn_info_descripcion">Identificar lo que está en la mira</string>
+    <string name="btn_escanear_descripcion">Identificar lo que está en la mira</string>
     <string name="btn_ver_en_maps">Ver en Maps</string>
     <string name="btn_cerrar">Cerrar</string>
 
-    <!-- Mensajes -->
-    <string name="sin_gps">Esperando señal GPS…</string>
-    <string name="sin_resultados_escaneo">No se encontró ningún accidente geográfico cercano</string>
+    <!-- Resultado -->
+    <string name="resultado_probable">Coincidencia probable — centra la mira para confirmar</string>
+
+    <!-- Avisos -->
+    <string name="sin_gps">Buscando señal GPS…</string>
+    <string name="aviso_gps_debil">Señal GPS débil: las etiquetas pueden estar desplazadas</string>
+    <string name="aviso_calibrar_brujula">Mueve el teléfono en forma de 8 para calibrar la brújula</string>
+    <string name="aviso_sin_brujula">Sin brújula: camina unos pasos para detectar hacia dónde miras</string>
+    <string name="sin_resultados_escaneo">No reconozco nada en esa dirección. Apunta la mira hacia el cerro o volcán.</string>
+
+    <!-- Errores -->
+    <string name="sin_sensores">Este dispositivo no tiene sensores de orientación compatibles.</string>
+    <string name="error_camara">Error al iniciar la cámara: %1$s</string>
+    <string name="error_ubicacion">No se pudo obtener la ubicación: permiso denegado</string>
+    <string name="error_maps">No se pudo abrir el mapa</string>
 </resources>

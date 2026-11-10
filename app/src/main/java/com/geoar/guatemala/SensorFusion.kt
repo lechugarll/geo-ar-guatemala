@@ -6,17 +6,19 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.util.Log
-import kotlin.math.atan2
-import kotlin.math.sqrt
 
 /**
- * Fusión de sensores para obtener orientación del dispositivo.
+ * Fusión de sensores para obtener la orientación completa del dispositivo.
+ *
+ * Entrega una matriz de rotación suavizada y referida al norte verdadero
+ * (mundo = R * dispositivo), que ArProyeccion usa para ubicar cada lugar
+ * en la pantalla. También expone azimuth y pitch derivados de esa matriz.
  *
  * Modos por prioridad según hardware disponible:
  *   1. ROTATION_VECTOR          — giroscopio + acel + mag (más estable)
  *   2. GEOMAGNETIC_ROTATION     — acelerómetro + magnetómetro, sin giroscopio
  *   3. ACCEL_MAG                — combinación manual acelerómetro + magnetómetro
- *   4. ACCEL_ONLY               — solo acelerómetro: pitch/roll del acelerómetro,
+ *   4. ACCEL_ONLY               — solo acelerómetro: inclinación del acelerómetro,
  *                                  azimuth del GPS (requiere llamar actualizarAzimuthGps)
  *                                  Caso del Samsung A05: sin brújula ni giroscopio.
  *   5. NINGUNO                  — sin sensores utilizables
@@ -26,6 +28,8 @@ class SensorFusion(private val context: Context) : SensorEventListener
     companion object
     {
         private const val TAG = "SensorFusion"
+        private const val ALPHA = 0.1f
+        private const val ALPHA_FALLBACK = 0.15f
     }
 
     private val sensorManager =
@@ -54,20 +58,44 @@ class SensorFusion(private val context: Context) : SensorEventListener
         else                                                       -> Modo.NINGUNO
     }
 
-    private val ALPHA = 0.1f
-    private val ALPHA_FALLBACK = 0.15f
+    /**
+     * Matriz de rotación suavizada (9 elementos, por filas), referida al norte verdadero.
+     * No modificar desde fuera.
+     */
+    val matrizRotacion = FloatArray(9)
 
+    /** true cuando ya se recibió al menos una lectura válida de orientación. */
+    var orientacionValida: Boolean = false
+        private set
+
+    /** Dirección de la cámara trasera: 0-360°, 0 = Norte verdadero. */
     var azimuth: Float = 0f
         private set
+
+    /** Inclinación de la cámara trasera: 0° = horizonte, + = hacia el cielo. */
     var pitch: Float = 0f
         private set
-    var roll: Float = 0f
+
+    /**
+     * Declinación magnética local en grados (norte magnético respecto al verdadero).
+     * Los sensores de Android apuntan al norte magnético; MainActivity actualiza
+     * este valor con GeomagneticField cuando conoce la ubicación.
+     */
+    var declinacionGrados: Float = 0f
+
+    /** true si el sistema reporta que la brújula necesita calibración. */
+    var brujulaDescalibrada: Boolean = false
         private set
 
-    // Buffers para modos rotation vector
-    private val matrizRotacion = FloatArray(9)
-    private val matrizRemapeada = FloatArray(9)
-    private val angulos = FloatArray(3)
+    /** true si en modo ACCEL_ONLY todavía no se ha recibido un rumbo del GPS. */
+    val esperandoRumboGps: Boolean
+        get() = modo == Modo.ACCEL_ONLY && !azimuthGpsValido
+
+    var onOrientacionCambiada: (() -> Unit)? = null
+
+    // Buffers reutilizables
+    private val matrizCruda = FloatArray(9)
+    private val matrizInclinacion = FloatArray(9)
     private val valoresSensor = FloatArray(5)
 
     // Buffers para modo ACCEL_MAG y ACCEL_ONLY
@@ -76,7 +104,9 @@ class SensorFusion(private val context: Context) : SensorEventListener
     private var gravityValido = false
     private var geomagneticValido = false
 
-    var onOrientacionCambiada: ((azimuth: Float, pitch: Float, roll: Float) -> Unit)? = null
+    // Azimuth del GPS para modo ACCEL_ONLY
+    private var azimuthGps = 0f
+    private var azimuthGpsValido = false
 
     init
     {
@@ -91,8 +121,6 @@ class SensorFusion(private val context: Context) : SensorEventListener
     // API pública
     // -------------------------------------------------------------------------
 
-    fun tieneRotationVector(): Boolean = modo == Modo.ROTATION_VECTOR
-
     fun tieneSensoresDisponibles(): Boolean = modo != Modo.NINGUNO
 
     fun descripcionModo(): String = when (modo)
@@ -105,16 +133,22 @@ class SensorFusion(private val context: Context) : SensorEventListener
     }
 
     /**
-     * Actualiza el azimuth con el bearing del GPS.
+     * Actualiza el azimuth con el rumbo del GPS.
      * Solo se aplica en modo ACCEL_ONLY (cuando no hay brújula).
-     * Llamar desde MainActivity.onLocationChanged cuando location.hasBearing().
+     * Llamar desde MainActivity cuando la ubicación trae rumbo y el usuario se mueve.
      */
     fun actualizarAzimuthGps(gpsBearing: Float)
     {
-        if (modo == Modo.ACCEL_ONLY)
+        if (modo != Modo.ACCEL_ONLY) return
+
+        if (!azimuthGpsValido)
         {
-            azimuth = filtrarAzimuth(azimuth, gpsBearing, ALPHA)
-            // No llama onOrientacionCambiada aquí — se invoca desde el acelerómetro
+            azimuthGps = gpsBearing
+            azimuthGpsValido = true
+        }
+        else
+        {
+            azimuthGps = filtrarAzimuth(azimuthGps, gpsBearing, ALPHA_FALLBACK)
         }
     }
 
@@ -124,40 +158,63 @@ class SensorFusion(private val context: Context) : SensorEventListener
 
     fun iniciar()
     {
-        when (modo)
+        try
         {
-            Modo.ROTATION_VECTOR ->
-                sensorManager.registerListener(
-                    this, rotationVectorSensor, SensorManager.SENSOR_DELAY_GAME
-                )
-
-            Modo.GEOMAGNETIC_ROTATION ->
-                sensorManager.registerListener(
-                    this, geomagneticRotationSensor, SensorManager.SENSOR_DELAY_GAME
-                )
-
-            Modo.ACCEL_MAG ->
+            when (modo)
             {
-                accelerometerSensor?.let {
-                    sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
+                Modo.ROTATION_VECTOR ->
+                    sensorManager.registerListener(
+                        this, rotationVectorSensor, SensorManager.SENSOR_DELAY_GAME
+                    )
+
+                Modo.GEOMAGNETIC_ROTATION ->
+                    sensorManager.registerListener(
+                        this, geomagneticRotationSensor, SensorManager.SENSOR_DELAY_GAME
+                    )
+
+                Modo.ACCEL_MAG ->
+                {
+                    sensorManager.registerListener(
+                        this, accelerometerSensor, SensorManager.SENSOR_DELAY_GAME
+                    )
+                    sensorManager.registerListener(
+                        this, magnetometerSensor, SensorManager.SENSOR_DELAY_GAME
+                    )
                 }
-                magnetometerSensor?.let {
-                    sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
-                }
+
+                Modo.ACCEL_ONLY ->
+                    sensorManager.registerListener(
+                        this, accelerometerSensor, SensorManager.SENSOR_DELAY_GAME
+                    )
+
+                Modo.NINGUNO -> { /* sin sensores */ }
             }
 
-            Modo.ACCEL_ONLY ->
-                accelerometerSensor?.let {
-                    sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
+            // El magnetómetro se escucha (a baja frecuencia) también en los modos de
+            // rotation vector, solo para saber si la brújula necesita calibración.
+            if (modo == Modo.ROTATION_VECTOR || modo == Modo.GEOMAGNETIC_ROTATION)
+            {
+                magnetometerSensor?.let { sensor ->
+                    sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_UI)
                 }
-
-            Modo.NINGUNO -> { /* sin sensores */ }
+            }
+        }
+        catch (e: Exception)
+        {
+            Log.e(TAG, "No se pudieron registrar los sensores", e)
         }
     }
 
     fun detener()
     {
-        sensorManager.unregisterListener(this)
+        try
+        {
+            sensorManager.unregisterListener(this)
+        }
+        catch (e: Exception)
+        {
+            Log.e(TAG, "No se pudieron detener los sensores", e)
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -178,18 +235,21 @@ class SensorFusion(private val context: Context) : SensorEventListener
                     procesarAcelerometro(event)
                     if (modo == Modo.ACCEL_ONLY)
                     {
-                        calcularPitchDesdeAcelerometro()
+                        calcularOrientacionSoloAcelerometro()
                     }
                     else
                     {
-                        calcularOrientacionFallback()
+                        calcularOrientacionAcelMag()
                     }
                 }
 
                 Sensor.TYPE_MAGNETIC_FIELD ->
                 {
-                    procesarMagnetometro(event)
-                    calcularOrientacionFallback()
+                    if (modo == Modo.ACCEL_MAG)
+                    {
+                        procesarMagnetometro(event)
+                        calcularOrientacionAcelMag()
+                    }
                 }
             }
         }
@@ -199,7 +259,14 @@ class SensorFusion(private val context: Context) : SensorEventListener
         }
     }
 
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) { /* no-op */ }
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int)
+    {
+        if (sensor?.type == Sensor.TYPE_MAGNETIC_FIELD)
+        {
+            brujulaDescalibrada = accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE ||
+                                  accuracy == SensorManager.SENSOR_STATUS_ACCURACY_LOW
+        }
+    }
 
     // -------------------------------------------------------------------------
     // Rotation vector (modos 1 y 2)
@@ -207,13 +274,15 @@ class SensorFusion(private val context: Context) : SensorEventListener
 
     private fun procesarRotationVector(event: SensorEvent)
     {
+        // Algunos dispositivos entregan más de 5 valores y getRotationMatrixFromVector falla
         System.arraycopy(
             event.values, 0,
             valoresSensor, 0,
             minOf(event.values.size, valoresSensor.size)
         )
-        SensorManager.getRotationMatrixFromVector(matrizRotacion, valoresSensor)
-        aplicarRemapeoYActualizar(matrizRotacion, ALPHA)
+        SensorManager.getRotationMatrixFromVector(matrizCruda, valoresSensor)
+        ArProyeccion.aplicarDeclinacion(matrizCruda, declinacionGrados)
+        actualizarOrientacion(matrizCruda, ALPHA)
     }
 
     // -------------------------------------------------------------------------
@@ -245,95 +314,60 @@ class SensorFusion(private val context: Context) : SensorEventListener
         geomagneticValido = true
     }
 
-    private fun calcularOrientacionFallback()
+    private fun calcularOrientacionAcelMag()
     {
         if (!gravityValido || !geomagneticValido) return
-        val rotMatrix = FloatArray(9)
-        val incMatrix = FloatArray(9)
-        val ok = SensorManager.getRotationMatrix(rotMatrix, incMatrix, gravity, geomagnetic)
+
+        val ok = SensorManager.getRotationMatrix(
+            matrizCruda, matrizInclinacion, gravity, geomagnetic
+        )
         if (!ok) return
-        aplicarRemapeoYActualizar(rotMatrix, ALPHA_FALLBACK)
+
+        ArProyeccion.aplicarDeclinacion(matrizCruda, declinacionGrados)
+        actualizarOrientacion(matrizCruda, ALPHA_FALLBACK)
     }
 
     // -------------------------------------------------------------------------
     // Solo acelerómetro (modo ACCEL_ONLY — Samsung A05 y similares)
-    // Pitch y roll desde gravedad; azimuth viene del GPS via actualizarAzimuthGps()
+    // Inclinación desde la gravedad; azimuth desde el GPS via actualizarAzimuthGps().
+    // El rumbo del GPS ya es norte verdadero, así que no se aplica declinación.
     // -------------------------------------------------------------------------
 
-    private fun calcularPitchDesdeAcelerometro()
+    private fun calcularOrientacionSoloAcelerometro()
     {
         if (!gravityValido) return
 
-        val gx = gravity[0].toDouble()
-        val gy = gravity[1].toDouble()
-        val gz = gravity[2].toDouble()
-
-        // Pitch en modo portrait (phone vertical):
-        //   0°  = mirando al horizonte (phone upright)
-        //  +90° = mirando al cielo (phone horizontal face up)
-        //  -90° = mirando al suelo (phone horizontal face down)
-        //
-        // Cuando el phone está vertical: gravity ≈ [0, g, 0] → gz≈0 → pitch≈0° ✓
-        // Cuando se inclina hacia atrás (cámara arriba): gz se vuelve negativo → pitch > 0 ✓
-        val nuevoPitch = Math.toDegrees(atan2(-gz, sqrt(gx * gx + gy * gy))).toFloat()
-
-        // Roll desde el acelerómetro (inclinación lateral)
-        val nuevoRoll = Math.toDegrees(atan2(gx, gy)).toFloat()
-
-        pitch = filtrarLineal(pitch, nuevoPitch, ALPHA_FALLBACK)
-        roll  = filtrarLineal(roll, nuevoRoll, ALPHA_FALLBACK)
-
-        onOrientacionCambiada?.invoke(azimuth, pitch, roll)
-    }
-
-    // -------------------------------------------------------------------------
-    // Remapeo (modos con rotation matrix completa)
-    // -------------------------------------------------------------------------
-
-    private fun aplicarRemapeoYActualizar(rotMatrix: FloatArray, alpha: Float)
-    {
-        // --- AZIMUTH: dirección que apunta la cámara trasera en el plano horizontal ---
-        //
-        // La cámara trasera apunta en la dirección -Z del teléfono.
-        // La matriz R transforma vectores del sistema del teléfono al sistema del mundo:
-        //   worldVec = R * deviceVec
-        //
-        // Dirección de la cámara en el mundo = R * [0, 0, -1]:
-        //   Componente Este  = -R[2]
-        //   Componente Norte = -R[5]
-        //
-        // Azimuth = atan2(Este, Norte) — igual que un brújula:
-        //   0° = Norte, 90° = Este, 180° = Sur, 270° = Oeste
-        //
-        // Este cálculo es correcto independientemente de la inclinación del teléfono
-        // y no requiere remapeo de ejes.
-        val cameraEast  = -rotMatrix[2]
-        val cameraNorth = -rotMatrix[5]
-        val nuevoAzimuth = Math.toDegrees(
-            Math.atan2(cameraEast.toDouble(), cameraNorth.toDouble())
-        ).toFloat()
-
-        // --- PITCH y ROLL: desde la matriz remapeada para modo portrait ---
-        // El remap AXIS_X / AXIS_MINUS_Z sitúa el eje Y en la dirección de la cámara,
-        // haciendo que pitch=0° corresponda a mirar al horizonte.
-        val ok = SensorManager.remapCoordinateSystem(
-            rotMatrix,
-            SensorManager.AXIS_X,
-            SensorManager.AXIS_MINUS_Z,
-            matrizRemapeada
+        val ok = ArProyeccion.matrizDesdeGravedadYAzimuth(
+            gravity[0], gravity[1], gravity[2],
+            azimuthGps,
+            matrizCruda
         )
         if (!ok) return
 
-        SensorManager.getOrientation(matrizRemapeada, angulos)
+        // La gravedad y el azimuth ya vienen filtrados
+        actualizarOrientacion(matrizCruda, 1f)
+    }
 
-        val nuevoPitch = Math.toDegrees(angulos[1].toDouble()).toFloat()
-        val nuevoRoll  = Math.toDegrees(angulos[2].toDouble()).toFloat()
+    // -------------------------------------------------------------------------
+    // Actualización común
+    // -------------------------------------------------------------------------
 
-        azimuth = filtrarAzimuth(azimuth, (nuevoAzimuth + 360f) % 360f, alpha)
-        pitch   = filtrarLineal(pitch, nuevoPitch, alpha)
-        roll    = filtrarLineal(roll, nuevoRoll, alpha)
+    private fun actualizarOrientacion(nueva: FloatArray, alpha: Float)
+    {
+        if (!orientacionValida)
+        {
+            System.arraycopy(nueva, 0, matrizRotacion, 0, 9)
+            orientacionValida = true
+        }
+        else
+        {
+            ArProyeccion.suavizarMatriz(matrizRotacion, nueva, alpha)
+        }
 
-        onOrientacionCambiada?.invoke(azimuth, pitch, roll)
+        azimuth = ArProyeccion.azimuthCamara(matrizRotacion)
+        pitch = ArProyeccion.pitchCamara(matrizRotacion)
+
+        onOrientacionCambiada?.invoke()
     }
 
     // -------------------------------------------------------------------------
@@ -346,10 +380,5 @@ class SensorFusion(private val context: Context) : SensorEventListener
         if (d > 180f) d -= 360f
         if (d < -180f) d += 360f
         return (anterior + alpha * d + 360f) % 360f
-    }
-
-    private fun filtrarLineal(anterior: Float, nuevo: Float, alpha: Float): Float
-    {
-        return anterior + alpha * (nuevo - anterior)
     }
 }
