@@ -54,8 +54,19 @@ class SensorFusion(private val context: Context) : SensorEventListener
         else                                                       -> Modo.NINGUNO
     }
 
-    private val ALPHA = 0.1f
     private val ALPHA_FALLBACK = 0.15f
+
+    // Alpha adaptivo para azimuth: responde rápido a giros, filtra ruido en reposo
+    private fun alphaAdaptivo(diferencia: Float): Float
+    {
+        return when
+        {
+            diferencia > 20f -> 0.5f   // giro rápido — seguir de inmediato
+            diferencia > 8f  -> 0.3f   // giro normal
+            diferencia > 3f  -> 0.15f  // ajuste fino
+            else             -> 0.08f  // quieto — filtrar ruido del sensor
+        }
+    }
 
     var azimuth: Float = 0f
         private set
@@ -113,7 +124,7 @@ class SensorFusion(private val context: Context) : SensorEventListener
     {
         if (modo == Modo.ACCEL_ONLY)
         {
-            azimuth = filtrarAzimuth(azimuth, gpsBearing, ALPHA)
+            azimuth = filtrarAzimuth(azimuth, gpsBearing)
             // No llama onOrientacionCambiada aquí — se invoca desde el acelerómetro
         }
     }
@@ -213,7 +224,7 @@ class SensorFusion(private val context: Context) : SensorEventListener
             minOf(event.values.size, valoresSensor.size)
         )
         SensorManager.getRotationMatrixFromVector(matrizRotacion, valoresSensor)
-        aplicarRemapeoYActualizar(matrizRotacion, ALPHA)
+        aplicarRemapeoYActualizar(matrizRotacion)
     }
 
     // -------------------------------------------------------------------------
@@ -252,7 +263,7 @@ class SensorFusion(private val context: Context) : SensorEventListener
         val incMatrix = FloatArray(9)
         val ok = SensorManager.getRotationMatrix(rotMatrix, incMatrix, gravity, geomagnetic)
         if (!ok) return
-        aplicarRemapeoYActualizar(rotMatrix, ALPHA_FALLBACK)
+        aplicarRemapeoYActualizar(rotMatrix)
     }
 
     // -------------------------------------------------------------------------
@@ -290,7 +301,7 @@ class SensorFusion(private val context: Context) : SensorEventListener
     // Remapeo (modos con rotation matrix completa)
     // -------------------------------------------------------------------------
 
-    private fun aplicarRemapeoYActualizar(rotMatrix: FloatArray, alpha: Float)
+    private fun aplicarRemapeoYActualizar(rotMatrix: FloatArray)
     {
         // --- AZIMUTH: dirección que apunta la cámara trasera en el plano horizontal ---
         //
@@ -329,9 +340,9 @@ class SensorFusion(private val context: Context) : SensorEventListener
         val nuevoPitch = Math.toDegrees(angulos[1].toDouble()).toFloat()
         val nuevoRoll  = Math.toDegrees(angulos[2].toDouble()).toFloat()
 
-        azimuth = filtrarAzimuth(azimuth, (nuevoAzimuth + 360f) % 360f, alpha)
-        pitch   = filtrarLineal(pitch, nuevoPitch, alpha)
-        roll    = filtrarLineal(roll, nuevoRoll, alpha)
+        azimuth = filtrarAzimuth(azimuth, (nuevoAzimuth + 360f) % 360f)
+        pitch   = filtrarLineal(pitch, nuevoPitch, ALPHA_FALLBACK)
+        roll    = filtrarLineal(roll, nuevoRoll, ALPHA_FALLBACK)
 
         onOrientacionCambiada?.invoke(azimuth, pitch, roll)
     }
@@ -340,11 +351,12 @@ class SensorFusion(private val context: Context) : SensorEventListener
     // Filtros
     // -------------------------------------------------------------------------
 
-    private fun filtrarAzimuth(anterior: Float, nuevo: Float, alpha: Float): Float
+    private fun filtrarAzimuth(anterior: Float, nuevo: Float): Float
     {
         var d = nuevo - anterior
         if (d > 180f) d -= 360f
         if (d < -180f) d += 360f
+        val alpha = alphaAdaptivo(kotlin.math.abs(d))
         return (anterior + alpha * d + 360f) % 360f
     }
 

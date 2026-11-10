@@ -43,6 +43,7 @@ android {
 
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
 
@@ -52,8 +53,15 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:1.4.1")
     implementation("androidx.camera:camera-view:1.4.1")
 
+    // FusedLocationProviderClient (GPS + WiFi + torres celulares, igual que Google Maps)
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+
     // Gson para parseo de JSON
     implementation("com.google.code.gson:gson:2.11.0")
+
+    // ML Kit Image Labeling — modelo preentrenado offline (bundled, ~5 MB)
+    // Se usa para verificar que la cámara realmente ve un paisaje antes de identificar
+    implementation("com.google.mlkit:image-labeling:17.0.9")
 
     // RecyclerView para historial
     implementation("androidx.recyclerview:recyclerview:1.3.2")

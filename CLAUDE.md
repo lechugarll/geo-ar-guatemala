@@ -165,3 +165,7 @@ cerros en blanco, lagos en celeste `#4FC3F7`.
    - Banner Ad Unit ID en `strings.xml` (`admob_banner_id`)
 2. Obtener `gradle-wrapper.jar` ejecutando `gradle wrapper --gradle-version 8.6`
    en la raíz del proyecto (requiere Gradle instalado localmente).
+3. Generar el DEM (modelo digital de elevación) para la oclusión por terreno real:
+   `pip install requests pillow numpy && python tools/generar_dem.py`
+   (una sola vez, requiere internet; produce `assets/dem_guatemala.bin` ~450 KB).
+   Sin este archivo la app funciona igual usando la oclusión por catálogo.

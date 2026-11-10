@@ -24,6 +24,8 @@ class HistorialManager(context: Context)
         if (!yaTiene)
         {
             lista.add(0, entry)
+            // Limitar el historial a 500 entradas para no saturar SharedPreferences
+            if (lista.size > 500) lista.removeAt(lista.lastIndex)
         }
         prefs.edit().putString(KEY, gson.toJson(lista)).apply()
     }

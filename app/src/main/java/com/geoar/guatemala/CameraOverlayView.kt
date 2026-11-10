@@ -1,5 +1,6 @@
 package com.geoar.guatemala
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
@@ -15,19 +16,20 @@ import com.geoar.guatemala.models.LugarGeografico
 /**
  * Vista personalizada que dibuja el overlay de realidad aumentada sobre la cámara.
  *
- * Para cada punto geográfico visible dibuja:
- *   - Rectángulo redondeado semitransparente (fondo negro 70%)
- *   - Borde coloreado según tipo de accidente
- *   - Ícono tipo + nombre en blanco bold
- *   - Distancia en km y elevación en msnm
- *   - Línea vertical desde la etiqueta al punto proyectado
- *   - Punto circular en la posición proyectada
+ * Diseño premium (lenguaje visual tipo iOS):
+ *   - Chip translúcido oscuro con esquinas muy redondeadas y borde hairline
+ *   - Punto de color según tipo (en lugar de emojis) + nombre en medium
+ *   - Info secundaria (distancia · elevación) en gris sistema
+ *   - Línea guía de 1 dp con baja opacidad hacia el punto proyectado
+ *   - Punto proyectado pequeño con halo sutil
+ *
+ * Reticle central (estilo Google Lens):
+ *   - LIBRE:     aro blanco tenue — sin objetivo centrado
+ *   - APUNTANDO: aro verde pulsante — objetivo centrado, contando 2 s
+ *   - BLOQUEADO: aro verde sólido — identificación completa
  *
  * Colores: volcán activo = rojo, volcán inactivo = naranja,
  *          cerros/sierras = blanco, lagos/lagunas = celeste.
- *
- * Nota: los lambdas de Kotlin (.apply, .also, etc.) requieren { en la misma línea.
- * Las llaves de clases, funciones e if/when usan estilo Allman.
  */
 class CameraOverlayView @JvmOverloads constructor(
     context: Context,
@@ -36,13 +38,50 @@ class CameraOverlayView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr)
 {
     // -------------------------------------------------------------------------
-    // Estado
+    // API: estado del reticle
+    // -------------------------------------------------------------------------
+
+    enum class EstadoReticulo { LIBRE, APUNTANDO, BLOQUEADO }
+
+    private var _estadoReticulo: EstadoReticulo = EstadoReticulo.LIBRE
+    var estadoReticulo: EstadoReticulo
+        get() = _estadoReticulo
+        set(value)
+        {
+            if (_estadoReticulo == value) return
+            _estadoReticulo = value
+            when (value)
+            {
+                EstadoReticulo.APUNTANDO -> animadorPulso.start()
+                else ->
+                {
+                    animadorPulso.cancel()
+                    fasePulso = 0f
+                }
+            }
+            invalidate()
+        }
+
+    private var fasePulso = 0f
+
+    private val animadorPulso = ValueAnimator.ofFloat(0f, 1f).apply {
+        duration = 1100L
+        repeatCount = ValueAnimator.INFINITE
+        repeatMode = ValueAnimator.RESTART
+        addUpdateListener { anim ->
+            fasePulso = anim.animatedValue as Float
+            invalidate()
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Estado de puntos AR
     // -------------------------------------------------------------------------
 
     private var puntosVisibles: List<Pair<LugarGeografico, PuntoVisible>> = emptyList()
 
     // -------------------------------------------------------------------------
-    // Dimensiones en píxeles — calculadas una sola vez
+    // Dimensiones en píxeles
     // -------------------------------------------------------------------------
 
     private val dm get() = resources.displayMetrics
@@ -51,42 +90,58 @@ class CameraOverlayView @JvmOverloads constructor(
     private fun dp(dp: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, dm)
 
     // -------------------------------------------------------------------------
-    // Paints (creados una sola vez para no allocar en onDraw)
-    // Nota: { del lambda debe ir en la misma línea que .apply en Kotlin
+    // Paints — etiquetas AR
     // -------------------------------------------------------------------------
 
     private val paintFondo = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
+        color = Color.argb(204, 22, 22, 24)
     }
 
-    private val paintBorde = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val paintHairline = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 4f
+        color = Color.argb(36, 255, 255, 255)
     }
 
     private val paintNombre = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        typeface = Typeface.DEFAULT_BOLD
+        color = Color.argb(255, 242, 242, 247)
+        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         textAlign = Paint.Align.LEFT
     }
 
     private val paintInfo = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(255, 152, 152, 157)
+        typeface = Typeface.create("sans-serif", Typeface.NORMAL)
         textAlign = Paint.Align.LEFT
     }
 
     private val paintLinea = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 4f
+        color = Color.argb(110, 255, 255, 255)
     }
 
     private val paintPunto = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
     }
 
-    private val paintMira = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(160, 255, 255, 255)
+    private val paintHalo = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
+
+    private val paintDotTipo = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
+
+    // -------------------------------------------------------------------------
+    // Paints — reticle central
+    // -------------------------------------------------------------------------
+
+    private val paintReticulo = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 4f
+    }
+
+    private val paintReticuloFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
     }
 
     // Buffer reutilizable para el rectángulo de cada etiqueta
@@ -103,6 +158,16 @@ class CameraOverlayView @JvmOverloads constructor(
     }
 
     // -------------------------------------------------------------------------
+    // Ciclo de vida
+    // -------------------------------------------------------------------------
+
+    override fun onDetachedFromWindow()
+    {
+        super.onDetachedFromWindow()
+        animadorPulso.cancel()
+    }
+
+    // -------------------------------------------------------------------------
     // Dibujo
     // -------------------------------------------------------------------------
 
@@ -110,14 +175,13 @@ class CameraOverlayView @JvmOverloads constructor(
     {
         super.onDraw(canvas)
 
-        // Actualizar tamaños de texto dependientes de la densidad
-        paintNombre.textSize = sp(16f)
-        paintBorde.strokeWidth = dp(1.5f)
-        paintLinea.strokeWidth = dp(1.5f)
-        paintMira.strokeWidth = dp(1.5f)
+        // Tamaños dependientes de densidad
+        paintNombre.textSize = sp(15f)
         paintInfo.textSize = sp(12f)
+        paintHairline.strokeWidth = dp(1f)
+        paintLinea.strokeWidth = dp(1f)
 
-        dibujarMiraCentral(canvas)
+        dibujarReticulo(canvas)
 
         for ((lugar, puntoVisible) in puntosVisibles)
         {
@@ -131,17 +195,82 @@ class CameraOverlayView @JvmOverloads constructor(
         }
     }
 
-    private fun dibujarMiraCentral(canvas: Canvas)
+    /**
+     * Dibuja el reticle central estilo Google Lens.
+     *
+     * LIBRE:     aro blanco muy tenue (apenas visible, no distrae)
+     * APUNTANDO: aro verde con onda expansiva pulsante (ValueAnimator)
+     * BLOQUEADO: aro verde sólido + punto central (identificación completa)
+     */
+    private fun dibujarReticulo(canvas: Canvas)
     {
         val cx = width / 2f
         val cy = height / 2f
-        val t = dp(18f)
-        val gap = t * 0.35f
+        val radioBase = dp(28f)
+        val verdeAR = Color.parseColor("#3DBA85")  // verde selva visible sobre cámara
 
-        canvas.drawLine(cx - t, cy, cx - gap, cy, paintMira)
-        canvas.drawLine(cx + gap, cy, cx + t, cy, paintMira)
-        canvas.drawLine(cx, cy - t, cx, cy - gap, paintMira)
-        canvas.drawLine(cx, cy + gap, cx, cy + t, paintMira)
+        when (estadoReticulo)
+        {
+            EstadoReticulo.LIBRE ->
+            {
+                // Aro blanco tenue — sutil guía de centro
+                paintReticulo.strokeWidth = dp(1f)
+                paintReticulo.color = Color.argb(55, 255, 255, 255)
+                canvas.drawCircle(cx, cy, radioBase, paintReticulo)
+
+                // Punto central muy pequeño
+                paintReticuloFill.color = Color.argb(70, 255, 255, 255)
+                canvas.drawCircle(cx, cy, dp(2f), paintReticuloFill)
+            }
+
+            EstadoReticulo.APUNTANDO ->
+            {
+                // Onda expansiva que crece y se desvanece
+                val radioPulso = radioBase + dp(18f) * fasePulso
+                val alphaPulso = ((1f - fasePulso) * 170).toInt()
+                paintReticulo.strokeWidth = dp(1.5f)
+                paintReticulo.color = Color.argb(alphaPulso, 61, 186, 133)
+                canvas.drawCircle(cx, cy, radioPulso, paintReticulo)
+
+                // Aro base verde estático
+                paintReticulo.strokeWidth = dp(2f)
+                paintReticulo.color = Color.argb(220, 61, 186, 133)
+                canvas.drawCircle(cx, cy, radioBase, paintReticulo)
+
+                // Punto central verde
+                paintReticuloFill.color = Color.argb(220, 61, 186, 133)
+                canvas.drawCircle(cx, cy, dp(3f), paintReticuloFill)
+
+                // 4 pequeñas muescas en el aro (estilo visor)
+                val gap = dp(5f)
+                val mLen = dp(7f)
+                paintReticulo.strokeWidth = dp(2f)
+                // arriba
+                canvas.drawLine(cx, cy - radioBase - gap, cx, cy - radioBase - gap - mLen, paintReticulo)
+                // abajo
+                canvas.drawLine(cx, cy + radioBase + gap, cx, cy + radioBase + gap + mLen, paintReticulo)
+                // izquierda
+                canvas.drawLine(cx - radioBase - gap, cy, cx - radioBase - gap - mLen, cy, paintReticulo)
+                // derecha
+                canvas.drawLine(cx + radioBase + gap, cy, cx + radioBase + gap + mLen, cy, paintReticulo)
+            }
+
+            EstadoReticulo.BLOQUEADO ->
+            {
+                // Aro verde sólido y brillante — bloqueado
+                paintReticulo.strokeWidth = dp(2.5f)
+                paintReticulo.color = Color.argb(255, 61, 186, 133)
+                canvas.drawCircle(cx, cy, radioBase, paintReticulo)
+
+                // Punto central relleno
+                paintReticuloFill.color = Color.argb(255, 61, 186, 133)
+                canvas.drawCircle(cx, cy, dp(4.5f), paintReticuloFill)
+
+                // Halo suave exterior
+                paintReticuloFill.color = Color.argb(30, 61, 186, 133)
+                canvas.drawCircle(cx, cy, radioBase + dp(8f), paintReticuloFill)
+            }
+        }
     }
 
     private fun dibujarEtiqueta(
@@ -151,90 +280,72 @@ class CameraOverlayView @JvmOverloads constructor(
         posicion: PointF
     )
     {
-        val colorAccento = colorAccento(lugar)
-        val textoNombre = "${icono(lugar)} ${lugar.nombre}"
+        val acento = colorAccento(lugar)
         val textoInfo = "${formatearDistancia(puntoVisible.distanciaKm)} · ${lugar.elevacionMsnm} msnm"
 
-        val padding = dp(12f)
-        val radioEsquinas = dp(10f)
-        val altoLineaIndicador = dp(48f)
+        val paddingH = dp(14f)
+        val paddingV = dp(10f)
+        val radioDot = dp(3.5f)
+        val espacioDot = radioDot * 2f + dp(8f)
+        val altoLineaIndicador = dp(44f)
 
-        val anchoNombre = paintNombre.measureText(textoNombre)
-        val anchoInfo = paintInfo.measureText(textoInfo)
-        val anchoEtiqueta = maxOf(anchoNombre, anchoInfo) + padding * 2
+        val anchoNombre = espacioDot + paintNombre.measureText(lugar.nombre)
+        val anchoInfo = espacioDot + paintInfo.measureText(textoInfo)
+        val anchoEtiqueta = maxOf(anchoNombre, anchoInfo) + paddingH * 2
         val altoNombre = paintNombre.textSize
         val altoInfo = paintInfo.textSize
-        val altoEtiqueta = altoNombre + altoInfo + padding * 2.5f
+        val interlinea = dp(5f)
+        val altoEtiqueta = paddingV * 2 + altoNombre + interlinea + altoInfo
+        val radioEsquinas = altoEtiqueta / 2.6f
 
         val xEtiqueta = (posicion.x - anchoEtiqueta / 2f)
-            .coerceIn(0f, (width - anchoEtiqueta).coerceAtLeast(0f))
+            .coerceIn(dp(8f), (width - anchoEtiqueta - dp(8f)).coerceAtLeast(0f))
         val yEtiqueta = (posicion.y - altoEtiqueta - altoLineaIndicador)
-            .coerceIn(0f, (height - altoEtiqueta).coerceAtLeast(0f))
+            .coerceIn(dp(8f), (height - altoEtiqueta).coerceAtLeast(0f))
 
-        // Línea indicadora
-        paintLinea.color = colorAccento
-        paintLinea.alpha = 200
-        canvas.drawLine(posicion.x, yEtiqueta + altoEtiqueta, posicion.x, posicion.y, paintLinea)
+        canvas.drawLine(posicion.x, yEtiqueta + altoEtiqueta + dp(4f), posicion.x, posicion.y - dp(7f), paintLinea)
 
-        // Punto proyectado
-        paintPunto.color = colorAccento
-        canvas.drawCircle(posicion.x, posicion.y, dp(5f), paintPunto)
+        paintHalo.color = acento
+        paintHalo.alpha = 56
+        canvas.drawCircle(posicion.x, posicion.y, dp(9f), paintHalo)
+        paintPunto.color = acento
+        canvas.drawCircle(posicion.x, posicion.y, dp(3.5f), paintPunto)
 
-        // Fondo semitransparente
         rectEtiqueta.set(xEtiqueta, yEtiqueta, xEtiqueta + anchoEtiqueta, yEtiqueta + altoEtiqueta)
-        paintFondo.color = Color.argb(178, 0, 0, 0)
         canvas.drawRoundRect(rectEtiqueta, radioEsquinas, radioEsquinas, paintFondo)
+        canvas.drawRoundRect(rectEtiqueta, radioEsquinas, radioEsquinas, paintHairline)
 
-        // Borde coloreado
-        paintBorde.color = colorAccento
-        paintBorde.alpha = 220
-        canvas.drawRoundRect(rectEtiqueta, radioEsquinas, radioEsquinas, paintBorde)
+        val yBaseNombre = yEtiqueta + paddingV + altoNombre - dp(1f)
+        paintDotTipo.color = acento
+        canvas.drawCircle(
+            xEtiqueta + paddingH + radioDot,
+            yBaseNombre - altoNombre * 0.32f,
+            radioDot,
+            paintDotTipo
+        )
 
-        // Nombre
-        paintNombre.color = Color.WHITE
-        canvas.drawText(textoNombre, xEtiqueta + padding, yEtiqueta + padding + altoNombre, paintNombre)
+        canvas.drawText(lugar.nombre, xEtiqueta + paddingH + espacioDot, yBaseNombre, paintNombre)
 
-        // Info
-        paintInfo.color = colorInfo(lugar)
-        canvas.drawText(textoInfo, xEtiqueta + padding, yEtiqueta + padding + altoNombre + padding * 0.6f + altoInfo, paintInfo)
+        canvas.drawText(
+            textoInfo,
+            xEtiqueta + paddingH + espacioDot,
+            yBaseNombre + interlinea + altoInfo,
+            paintInfo
+        )
     }
 
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
-    private fun icono(lugar: LugarGeografico): String
-    {
-        return when (lugar.tipo)
-        {
-            "volcan"          -> if (lugar.activo) "🌋" else "⛰️"
-            "cerro"           -> "⛰️"
-            "montana"         -> "⛰️"
-            "sierra"          -> "⛰️"
-            "lago"            -> "💧"
-            "laguna"          -> "💧"
-            else              -> "📍"
-        }
-    }
-
     private fun colorAccento(lugar: LugarGeografico): Int
     {
         return when (lugar.tipo)
         {
-            "volcan"                     -> if (lugar.activo) Color.parseColor("#F44336") else Color.parseColor("#FF6600")
-            "cerro", "montana", "sierra" -> Color.WHITE
-            "lago", "laguna"             -> Color.parseColor("#4FC3F7")
-            else                         -> Color.WHITE
-        }
-    }
-
-    private fun colorInfo(lugar: LugarGeografico): Int
-    {
-        return when (lugar.tipo)
-        {
-            "volcan"         -> if (lugar.activo) Color.parseColor("#FF8A80") else Color.parseColor("#FFAB40")
-            "lago", "laguna" -> Color.parseColor("#80D8FF")
-            else             -> Color.parseColor("#BDBDBD")
+            "volcan"                     -> if (lugar.activo) Color.parseColor("#FF453A") else Color.parseColor("#FF9F0A")
+            "cerro", "montana", "sierra" -> Color.parseColor("#F2F2F7")
+            "lago", "laguna"             -> Color.parseColor("#64D2FF")
+            else                         -> Color.parseColor("#F2F2F7")
         }
     }
 

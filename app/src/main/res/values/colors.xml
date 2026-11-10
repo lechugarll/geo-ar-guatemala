@@ -1,62 +1,68 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- === Design System: Tectonic Interface === -->
+    <!-- === Design System: paleta oscura refinada (lenguaje visual iOS) === -->
 
-    <!-- Surfaces -->
-    <color name="surface">#FF121416</color>
-    <color name="surface_container_lowest">#FF0C0E10</color>
-    <color name="surface_container_low">#FF1A1C1E</color>
-    <color name="surface_container">#FF1E2022</color>
-    <color name="surface_container_high">#FF282A2C</color>
-    <color name="surface_container_highest">#FF333537</color>
-    <color name="surface_variant">#FF333537</color>
+    <!-- Surfaces: negros profundos con pasos sutiles -->
+    <color name="surface">#FF0B0B0D</color>
+    <color name="surface_container_lowest">#FF060608</color>
+    <color name="surface_container_low">#FF161618</color>
+    <color name="surface_container">#FF1C1C1E</color>
+    <color name="surface_container_high">#FF2C2C2E</color>
+    <color name="surface_container_highest">#FF3A3A3C</color>
+    <color name="surface_variant">#FF2C2C2E</color>
 
-    <!-- Primary (green) -->
-    <color name="primary">#FFA1D494</color>
-    <color name="primary_container">#FF2D5A27</color>
-    <color name="on_primary">#FF0A3909</color>
+    <!-- Primary: verde selva guatemalteco (profundo, premium, no radiactivo) -->
+    <color name="primary">#FF1E8A5E</color>
+    <color name="primary_container">#FF0A3D28</color>
+    <color name="on_primary">#FFFFFFFF</color>
 
-    <!-- Tertiary (amber — active volcanoes, alerts) -->
-    <color name="tertiary">#FFFFBA38</color>
-    <color name="tertiary_container">#FF6C4A00</color>
+    <!-- Tertiary (ámbar — volcanes activos, alertas) -->
+    <color name="tertiary">#FFFF9F0A</color>
+    <color name="tertiary_container">#FF5C3A00</color>
 
-    <!-- On-surface text -->
-    <color name="on_surface">#FFE2E2E5</color>
-    <color name="on_surface_variant">#FFC2C9BB</color>
-    <color name="outline_variant">#FF42493E</color>
+    <!-- Texto sobre superficies -->
+    <color name="on_surface">#FFF2F2F7</color>
+    <color name="on_surface_variant">#FF98989D</color>
+    <color name="outline_variant">#FF2C2C2E</color>
+
+    <!-- Hairline para bordes de paneles translúcidos -->
+    <color name="hairline">#24FFFFFF</color>
 
     <!-- Error -->
-    <color name="color_error">#FFFFB4AB</color>
+    <color name="color_error">#FFFF453A</color>
 
     <!-- AR Overlay (CameraOverlayView) -->
-    <color name="color_volcan_activo">#FFFF4444</color>
-    <color name="color_volcan_inactivo">#FFFF8C00</color>
-    <color name="color_cerro">#FFE2E2E5</color>
-    <color name="color_lago">#FF4FC3F7</color>
+    <color name="color_volcan_activo">#FFFF453A</color>
+    <color name="color_volcan_inactivo">#FFFF9F0A</color>
+    <color name="color_cerro">#FFF2F2F7</color>
+    <color name="color_lago">#FF64D2FF</color>
 
     <!-- UI buttons (legacy) -->
-    <color name="color_boton_info">#FF424242</color>
-    <color name="color_boton_escanear">#FF1565C0</color>
-    <color name="color_boton_maps">#FF1976D2</color>
+    <color name="color_boton_info">#FF3A3A3C</color>
+    <color name="color_boton_escanear">#FF1E8A5E</color>
+    <color name="color_boton_maps">#FF0A84FF</color>
 
     <!-- History badge colors by type -->
-    <color name="badge_volcan_activo_bg">#33FF4444</color>
-    <color name="badge_volcan_activo_text">#FFFF6B6B</color>
-    <color name="badge_volcan_bg">#33FFBA38</color>
-    <color name="badge_volcan_text">#FFFFBA38</color>
-    <color name="badge_lago_bg">#334FC3F7</color>
-    <color name="badge_lago_text">#FF4FC3F7</color>
+    <color name="badge_volcan_activo_bg">#33FF453A</color>
+    <color name="badge_volcan_activo_text">#FFFF6961</color>
+    <color name="badge_volcan_bg">#33FF9F0A</color>
+    <color name="badge_volcan_text">#FFFF9F0A</color>
+    <color name="badge_lago_bg">#3364D2FF</color>
+    <color name="badge_lago_text">#FF64D2FF</color>
     <color name="badge_sierra_bg">#33A1887F</color>
     <color name="badge_sierra_text">#FFA1887F</color>
     <color name="badge_cerro_bg">#33AAAAAA</color>
     <color name="badge_cerro_text">#FFAAAAAA</color>
 
     <!-- History thumbnail background colors by type -->
-    <color name="thumb_volcan_activo">#CCFF4444</color>
-    <color name="thumb_volcan">#CCFF8C00</color>
-    <color name="thumb_lago">#CC4FC3F7</color>
+    <color name="thumb_volcan_activo">#CCFF453A</color>
+    <color name="thumb_volcan">#CCFF9F0A</color>
+    <color name="thumb_lago">#CC64D2FF</color>
     <color name="thumb_laguna">#CC26C6DA</color>
     <color name="thumb_sierra">#CC8D6E63</color>
     <color name="thumb_cerro">#CC78909C</color>
     <color name="thumb_montana">#CC78909C</color>
+
+    <!-- Splash screen -->
+    <color name="splash_background">#FF0B0B0D</color>
 </resources>

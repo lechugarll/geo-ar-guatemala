@@ -31,9 +31,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="@color/on_surface_variant"
-            android:textSize="12sp"
-            android:letterSpacing="0.08"
-            android:text="0 SITES RECORDED" />
+            android:textSize="13sp"
+            android:letterSpacing="0.01"
+            android:text="0 lugares registrados" />
 
     </LinearLayout>
 
@@ -90,7 +90,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:clipToPadding="false"
-        android:paddingBottom="80dp" />
+        android:paddingBottom="108dp" />
 
     <!-- Mensaje vacío -->
     <TextView
@@ -115,7 +115,7 @@
         android:paddingStart="20dp"
         android:paddingEnd="20dp"
         android:paddingTop="16dp"
-        android:paddingBottom="86dp"
+        android:paddingBottom="108dp"
         android:visibility="gone">
 
         <TextView
